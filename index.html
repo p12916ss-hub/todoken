@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f6f1e6">
+<title>トドケン</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="トドケン">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" href="./icon-192.png" sizes="192x192">
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section id="screen-home" class="screen active">
+  <div class="home-head">
+    <div class="wordmark">トドケン<small>47 PREFECTURES</small></div>
+    <div class="streak">連続 <b id="streakNum">0</b> 日</div>
+  </div>
+
+  <div class="scroll">
+    <button class="primary-card" id="startBtn">
+      <div>
+        <span class="k">TODAY</span>
+        <div class="t" id="dueTitle">はじめる</div>
+        <div class="s" id="dueLabel">まずは10問から</div>
+      </div>
+      <div class="ring">
+        <svg viewBox="0 0 60 60" aria-hidden="true">
+          <circle class="track" cx="30" cy="30" r="26" fill="none" stroke-width="4"/>
+          <circle class="fill" id="ringFill" cx="30" cy="30" r="26" fill="none" stroke-width="4"
+                  stroke-dasharray="163" stroke-dashoffset="163"/>
+        </svg>
+        <div class="ring num" id="ringNum">0<small>問</small></div>
+      </div>
+    </button>
+
+    <div class="map-card">
+      <div class="cap">
+        <span class="l">MASTERY MAP</span>
+        <span class="r">マスター <span id="masterNum">0</span><small>/47</small></span>
+      </div>
+      <div class="map-slot" id="homeMap"></div>
+    </div>
+
+    <p class="sect-label">練習する</p>
+    <div class="mode-list">
+      <button class="mode" data-mode="map">
+        <span class="no">01</span>
+        <span><h3>地図</h3><p>県名から場所を当てる。位置と形を一緒に。</p></span>
+        <span class="cnt" id="cnt-map">0/47</span>
+      </button>
+      <button class="mode" data-mode="capital">
+        <span class="no">02</span>
+        <span><h3>県庁所在地</h3><p>同名28県と、異名19県を分けて出題。</p></span>
+        <span class="cnt" id="cnt-capital">0/47</span>
+      </button>
+      <button class="mode" data-mode="keyword">
+        <span class="no">03</span>
+        <span><h3>名物</h3><p>5つの手がかりから県を当てる。理由つき。</p></span>
+        <span class="cnt" id="cnt-keyword">0/47</span>
+      </button>
+    </div>
+
+    <div class="links">
+      <button id="bookBtn">まちがいノート</button>
+      <button id="setBtn">設定</button>
+    </div>
+    <p class="foot-note">記録はこの端末にだけ保存されます。外部送信はありません。</p>
+  </div>
+</section>
+
+<!-- ================= QUIZ ================= -->
+<section id="screen-quiz" class="screen">
+  <div class="qhead">
+    <button class="icon-btn" id="quitBtn" aria-label="やめる">‹</button>
+    <span class="mode-name" id="modeName">地図モード</span>
+    <span class="qcount" id="qCount"><b>1</b>/10</span>
+  </div>
+  <div class="dots" id="dots"></div>
+
+  <div class="prompt">
+    <p class="sub" id="promptSub">地図の上でタップ</p>
+    <h2 class="main" id="promptMain">青森県</h2>
+  </div>
+
+  <div id="qBody" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
+
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-top">
+      <span class="mark" id="mark">○</span>
+      <span class="sheet-title" id="sheetTitle"></span>
+      <button class="next-btn" id="nextBtn">次へ</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</section>
+
+<!-- ================= RESULT ================= -->
+<section id="screen-result" class="screen">
+  <div class="scroll">
+    <div class="result-top">
+      <p class="k">SESSION RESULT</p>
+      <div class="score"><b id="scoreNum">0</b><span id="scoreTotal">/10</span></div>
+      <p class="comment" id="scoreComment"></p>
+    </div>
+    <p class="review-h">間違えた県</p>
+    <div class="review-list" id="reviewList"></div>
+  </div>
+  <div class="actions">
+    <button class="btn-primary" id="againBtn">もう一度</button>
+    <button class="btn-ghost" id="homeBtn">ホームへ</button>
+  </div>
+</section>
+
+<!-- ================= BOOK ================= -->
+<section id="screen-book" class="screen">
+  <div class="page-head">
+    <button class="icon-btn" id="bookBack" aria-label="戻る">‹</button>
+    <h2>まちがいノート</h2>
+    <span class="sub" id="bookSub"></span>
+  </div>
+  <div class="scroll" id="bookList"></div>
+  <div class="actions">
+    <button class="btn-primary" id="bookReviewBtn">復習する</button>
+  </div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section id="screen-settings" class="screen">
+  <div class="page-head">
+    <button class="icon-btn" id="setBack" aria-label="戻る">‹</button>
+    <h2>設定</h2>
+  </div>
+  <div class="scroll">
+    <div class="set-row">
+      <span class="l">効果音<small>正解・不正解のときだけ鳴ります</small></span>
+      <button class="switch" id="swSound" aria-label="効果音"></button>
+    </div>
+    <div class="set-row">
+      <span class="l">地図の表示<small>覚えていない県は地方ズーム、覚えたら全国。</small></span>
+      <div class="seg" id="zoomSeg">
+        <button data-v="auto" class="on">自動</button>
+        <button data-v="always">常に地方</button>
+        <button data-v="off">常に全国</button>
+      </div>
+    </div>
+    <div class="set-row">
+      <span class="l danger">学習の記録を消す<small>間隔反復の予定もすべてリセットされます</small></span>
+      <button class="btn-ghost" id="resetBtn" style="padding:10px 14px;flex:none">消去</button>
+    </div>
+    <p class="about">
+      トドケン v1.0<br>
+      正解すると間隔をあけて再出題します（1日→3日→7日→16日→35日）。間違えた県は翌日と、そのセッションの3問後に戻ってきます。<br>
+      地図データ：国土数値情報（行政区域）を簡略化。出典：国土交通省。<br>
+      収録内容は代表例です。学習用途の参考として使い、断定は避けてください。
+    </p>
+  </div>
+</section>
+
+<script src="./mapdata.js"></script>
+<script src="./data.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

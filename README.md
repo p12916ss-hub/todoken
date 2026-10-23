@@ -3,19 +3,20 @@
 地図・県庁所在地・名物を、間隔反復で覚えるための個人用アプリ。
 iPhone のホーム画面に追加して、アプリのように使えます。
 
----
+\---
 
-## 1. いちばん簡単な入れ方（推奨・5分）
+## 1\. いちばん簡単な入れ方（推奨・5分）
 
 無料・失効なし・オフライン動作。Apple Developer Program も Mac も要りません。
 
 ### 手順
 
 1. **このフォルダをそのままWebに置く**
-   GitHub の無料アカウントで新しいリポジトリを作り、このフォルダの中身をアップロードする。
-   - リポジトリ → `Add file` → `Upload files` → 中身を全部ドラッグ
-   - `Settings` → `Pages` → Source を `Deploy from a branch`、Branch を `main` / `/ (root)` にして Save
-   - 数十秒後、`https://<ユーザー名>.github.io/<リポジトリ名>/` が公開される
+GitHub の無料アカウントで新しいリポジトリを作り、このフォルダの中身をアップロードする。
+
+   * リポジトリ → `Add file` → `Upload files` → 中身を全部ドラッグ
+   * `Settings` → `Pages` → Source を `Deploy from a branch`、Branch を `main` / `/ (root)` にして Save
+   * 数十秒後、`https://<ユーザー名>.github.io/<リポジトリ名>/` が公開される
 2. **iPhone の Safari でそのURLを開く**（Chrome ではなく **Safari**）
 3. 共有ボタン（□に↑）→ **「ホーム画面に追加」**
 4. ホーム画面の「トドケン」から起動。以降は機内モードでも動きます。
@@ -28,4 +29,8 @@ iPhone のホーム画面に追加して、アプリのように使えます。
 
 ファイルを差し替えたら `sw.js` の1行目 `const CACHE = "todoken-v1";` の数字を上げてください。
 上げないと、iPhone は古いキャッシュを表示し続けます。アプリを一度削除して入れ直すのが確実です。
+
+\---
+
+## 
 

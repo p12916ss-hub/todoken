@@ -1,14 +1,17 @@
-/* トドケン — アプリ本体
+/* トドケン — アプリ本体 v1.1
    学習設計:
    - 想起（思い出す）を毎問1回必ず発生させる
    - 誤答は「なぜ」を1行返し、同じ項目を3問後に再出題（即時再学習）
    - 正答は間隔をあけて再出題（1→3→7→16→35日）
    - 誤答した項目は「まちがいノート」に残す
+
+   地図操作:
+   - 1本指ドラッグ＝移動、2本指ピンチ＝拡大縮小、＋/− ボタン＝段階ズーム
+   - viewBox を動かす方式なので、拡大しても文字と当たり判定が一緒に拡大する
 */
 (function () {
   "use strict";
 
-  /* 万一のエラーを画面とログに出す（学習記録を壊さないため） */
   function reportErr(m) {
     try { fetch("/__err?m=" + encodeURIComponent(String(m).slice(0, 300))); } catch (e) {}
     var d = document.createElement("div");
@@ -23,11 +26,11 @@
   /* ---------------- storage ---------------- */
   var KEY = "todoken.v3";
   var DAY = 86400000;
-  var INTERVALS = [0, 1, 3, 7, 16, 35];      // box 0..5
+  var INTERVALS = [0, 1, 3, 7, 16, 35];
   var SESSION_SIZE = 10;
 
   var S = {
-    items: {},                                  // "mode:id" -> {b,d,n,seen}
+    items: {},
     streak: { last: null, count: 0 },
     today: { d: null, n: 0 },
     settings: { sound: true, zoom: "auto" }
@@ -44,7 +47,7 @@
         S.today = o.today || S.today;
         S.settings = Object.assign(S.settings, o.settings || {});
       }
-    } catch (e) { /* 初回・プライベートモード */ }
+    } catch (e) {}
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
@@ -62,11 +65,7 @@
     var t = todayIndex();
     if (S.today.d !== t) { S.today.d = t; S.today.n = 0; }
   }
-  function bumpToday() {
-    touchPlay();
-    S.today.n += 1;
-    save();
-  }
+  function bumpToday() { touchPlay(); S.today.n += 1; save(); }
 
   /* ---------------- prefecture helpers ---------------- */
   var BY_ID = {};
@@ -82,8 +81,6 @@
     }
     return a;
   }
-
-  /* 習熟度: 3モードの平均boxから 0..3 の段階へ */
   function levelOf(p) {
     var s = 0;
     for (var i = 0; i < MODES.length; i++) s += getItem(MODES[i], p.id).b;
@@ -139,17 +136,18 @@
     if (name === "settings") renderSettings();
   }
 
-  /* ---------------- map ---------------- */
+  /* =========================================================
+     地図エンジン
+     ========================================================= */
   var NS = "http://www.w3.org/2000/svg";
   var ZONES = {};
-  PREF.forEach(function (p) {
-    (ZONES[p.region] = ZONES[p.region] || []).push(p.id);
-  });
+  PREF.forEach(function (p) { (ZONES[p.region] = ZONES[p.region] || []).push(p.id); });
 
-  function buildMap(opt) {
-    opt = opt || {};
+  var MIN_SCALE = 1;
+  var MAX_SCALE = 14;
+
+  function buildMap() {
     var svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("viewBox", "0 0 438 516");
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.setAttribute("class", "jp");
     var g = document.createElementNS(NS, "g");
@@ -157,88 +155,293 @@
     PREF.forEach(function (p) {
       var path = document.createElementNS(NS, "path");
       path.setAttribute("d", MAP_PATHS[p.id]);
-      path.setAttribute("class", "pref" + (opt.interactive ? " hoverable" : ""));
+      path.setAttribute("class", "pref");
       path.setAttribute("data-id", p.id);
       g.appendChild(path);
     });
+    var halo = document.createElementNS(NS, "g");
+    halo.setAttribute("class", "touch");
+    var order = [];
+    for (var i = 0; i < g.children.length; i++) {
+      var c = g.children[i], b = c.getBBox();
+      order.push({ d: c.getAttribute("d"), id: c.getAttribute("data-id"), a: b.width * b.height });
+    }
+    order.sort(function (x, y) { return y.a - x.a; });   // 小さい県ほど前面
+    order.forEach(function (o) {
+      var h = document.createElementNS(NS, "path");
+      h.setAttribute("d", o.d);
+      h.setAttribute("class", "halo");
+      h.setAttribute("data-id", o.id);
+      halo.appendChild(h);
+    });
+    g.appendChild(halo);
     svg.appendChild(g);
     svg._zoom = g;
     return svg;
   }
 
-  /* 47県全体が枠に収まるよう viewBox を実測して合わせる */
-  function fitAll(svg) {
-    var paths = svg._zoom.querySelectorAll(".pref");
-    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-    for (var i = 0; i < paths.length; i++) {
-      var b = paths[i].getBBox();
-      if (b.width === 0) continue;
-      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
-      x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
-    }
-    if (x0 > x1) return;
-    var pad = 6;
-    svg.setAttribute("viewBox", (x0 - pad) + " " + (y0 - pad) + " " +
-      (x1 - x0 + pad * 2) + " " + (y1 - y0 + pad * 2));
-    svg._base = svg.getAttribute("viewBox").split(" ").map(Number);
-  }
-
-  /* 地方にズーム。zone=null で全国 */
-  function fitZone(svg, zone) {
+  function bboxOf(svg, ids) {
     var g = svg._zoom;
-    if (!svg._base) svg._base = [0, 0, 438, 516];
-    if (!zone) { g.setAttribute("transform", ""); return; }
-    var BW = svg._base[2], BH = svg._base[3];
-    var ids = ZONES[zone] || [];
-    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-    ids.forEach(function (id) {
-      var b = g.querySelector('[data-id="' + id + '"]').getBBox();
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, any = false;
+    (ids || Object.keys(MAP_PATHS)).forEach(function (id) {
+      var p = g.querySelector('.pref[data-id="' + id + '"]');
+      if (!p) return;
+      var b = p.getBBox();
+      if (!b.width && !b.height) return;
+      any = true;
       x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
       x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
     });
-    var w = Math.max(x1 - x0, 1), h = Math.max(y1 - y0, 1);
-    var s = Math.min(BW / w, BH / h) * 0.92;
-    s = Math.max(1, Math.min(7, s));
-    var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    g.setAttribute("transform", "translate(" + (BW / 2 - s * cx) + "," + (BH / 2 - s * cy) + ") scale(" + s + ")");
+    if (!any) return { x: 0, y: 0, w: 438, h: 516 };
+    return { x: x0, y: y0, w: Math.max(x1 - x0, 1), h: Math.max(y1 - y0, 1) };
+  }
+
+  function applyVB(svg) {
+    var vb = svg._vb;
+    svg.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h);
+  }
+
+  /* 47県全体が枠に収まる基準ビュー */
+  function baseView(svg) {
+    var r = bboxOf(svg);
+    var pad = Math.max(r.w, r.h) * 0.015;
+    svg._base = { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 };
+    svg._vb = { x: svg._base.x, y: svg._base.y, w: svg._base.w, h: svg._base.h };
+    applyVB(svg);
+  }
+
+  /* 指定した範囲が枠いっぱいに来るビュー */
+  function viewFor(svg, r, margin) {
+    margin = margin == null ? 0.06 : margin;
+    var rect = svg.getBoundingClientRect();
+    var ar = (rect.width && rect.height) ? rect.width / rect.height : 0.85;
+    var w = r.w * (1 + margin * 2), h = r.h * (1 + margin * 2);
+    if (w / h > ar) h = w / ar; else w = h * ar;
+    return { x: r.x + r.w / 2 - w / 2, y: r.y + r.h / 2 - h / 2, w: w, h: h };
+  }
+
+  function clampVB(svg) {
+    var b = svg._base, v = svg._vb;
+    if (!b) return;
+    var sc = b.w / v.w;
+    if (sc <= MIN_SCALE * 1.001) {
+      v.x = b.x; v.y = b.y; v.w = b.w; v.h = b.h;
+      return;
+    }
+    if (sc > MAX_SCALE) {
+      var k = MAX_SCALE / sc, cx = v.x + v.w / 2, cy = v.y + v.h / 2;
+      v.w *= 1 / k; v.h *= 1 / k;
+      v.x = cx - v.w / 2; v.y = cy - v.h / 2;
+    }
+    var mx = b.w * 0.25, my = b.h * 0.25;
+    if (v.x + v.w < b.x + v.w * 0.5) v.x = b.x - mx;
+    if (v.x > b.x + b.w - v.w * 0.5) v.x = b.x + b.w - v.w + mx;
+    if (v.y + v.h < b.y + v.h * 0.5) v.y = b.y - my;
+    if (v.y > b.y + b.h - v.h * 0.5) v.y = b.y + b.h - v.h + my;
+  }
+
+  function gotoVB(svg, target, dur) {
+    var from = { x: svg._vb.x, y: svg._vb.y, w: svg._vb.w, h: svg._vb.h };
+    if (!dur) { svg._vb = target; clampVB(svg); applyVB(svg); return; }
+    var t0 = performance.now();
+    var id = svg._anim = (svg._anim || 0) + 1;
+    function step(now) {
+      if (svg._anim !== id) return;
+      var t = Math.min(1, (now - t0) / dur);
+      var e = 1 - Math.pow(1 - t, 3);
+      svg._vb = {
+        x: from.x + (target.x - from.x) * e,
+        y: from.y + (target.y - from.y) * e,
+        w: from.w + (target.w - from.w) * e,
+        h: from.h + (target.h - from.h) * e
+      };
+      applyVB(svg);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function toUser(svg, cx, cy) {
+    var m = svg.getScreenCTM();
+    if (!m) return { x: 0, y: 0 };
+    var pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    var p = pt.matrixTransform(m.inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  function zoomAtClient(svg, cx, cy, factor, dur) {
+    var v = svg._vb, b = svg._base;
+    var want = b.w / (v.w / factor);
+    if (want < MIN_SCALE) factor = b.w / v.w / MIN_SCALE;
+    if (want > MAX_SCALE) factor = b.w / (v.w / MAX_SCALE);
+    var p = toUser(svg, cx, cy);
+    var nw = v.w / factor, nh = v.h / factor;
+    var t = {
+      x: p.x - (p.x - v.x) * (nw / v.w),
+      y: p.y - (p.y - v.y) * (nh / v.h),
+      w: nw, h: nh
+    };
+    var tmp = svg._vb; svg._vb = t; clampVB(svg); t = svg._vb; svg._vb = tmp;
+    gotoVB(svg, t, dur === undefined ? 0 : dur);
+  }
+
+  function panByUser(svg, dux, duy) {
+    svg._vb.x -= dux;
+    svg._vb.y -= duy;
+    clampVB(svg);
+    applyVB(svg);
+  }
+
+  function fitRegion(svg, region, dur) {
+    if (!region) { gotoVB(svg, svg._base, dur); return; }
+    var ids = ZONES[region] || [];
+    gotoVB(svg, viewFor(svg, bboxOf(svg, ids), 0.05), dur);
+  }
+
+  function fitIds(svg, ids, margin, dur) {
+    gotoVB(svg, viewFor(svg, bboxOf(svg, ids), margin || 0.7), dur);
+  }
+
+  function scaleOf(svg) { return svg._base.w / svg._vb.w; }
+
+  /* 指の操作 */
+  function attachGestures(svg, opts) {
+    opts = opts || {};
+    var ptrs = {};
+    var n = 0;
+    var start = null;
+    var pinchD = 0;
+    var locked = false;
+
+    function dist2() {
+      var a = [], k;
+      for (k in ptrs) a.push(ptrs[k]);
+      if (a.length < 2) return 0;
+      var dx = a[0].x - a[1].x, dy = a[0].y - a[1].y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    function mid() {
+      var a = [], k;
+      for (k in ptrs) a.push(ptrs[k]);
+      return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2 };
+    }
+
+    svg.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (svg._anim) svg._anim++;
+      try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+      ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+      n++;
+      if (n === 1) {
+        start = { x: e.clientX, y: e.clientY, t: Date.now(), moved: 0, target: e.target };
+      } else {
+        if (start) start.moved = 999;
+        pinchD = dist2();
+      }
+      if (opts.onFirstTouch) opts.onFirstTouch();
+    });
+
+    svg.addEventListener("pointermove", function (e) {
+      var p = ptrs[e.pointerId];
+      if (!p) return;
+      var dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      if (n === 1 && start) {
+        start.moved += Math.abs(dx) + Math.abs(dy);
+        if (start.moved > 4 && !locked) {
+          var a = toUser(svg, p.x - dx, p.y - dy);
+          var b = toUser(svg, p.x, p.y);
+          panByUser(svg, b.x - a.x, b.y - a.y);
+        }
+      } else if (n >= 2 && pinchD > 0) {
+        var d = dist2();
+        if (d > 0) {
+          var m = mid();
+          zoomAtClient(svg, m.x, m.y, d / pinchD, 0);
+          pinchD = d;
+        }
+        if (start) start.moved = 999;
+      }
+    });
+
+    function up(e) {
+      if (!ptrs[e.pointerId]) return;
+      delete ptrs[e.pointerId];
+      n--;
+      if (n <= 0) {
+        n = 0; ptrs = {}; pinchD = 0;
+        if (start && start.moved < 8 && Date.now() - start.t < 800) {
+          var t = start.target;
+          var id = t && t.getAttribute ? t.getAttribute("data-id") : null;
+          if (id && opts.onTap && !locked) opts.onTap(id);
+        }
+        start = null;
+      } else if (n === 1) {
+        pinchD = 0;
+        start = null;
+      }
+    }
+    svg.addEventListener("pointerup", up);
+    svg.addEventListener("pointercancel", up);
+
+    svg.addEventListener("wheel", function (e) {
+      if (svg._anim) svg._anim++;
+      e.preventDefault();
+      zoomAtClient(svg, e.clientX, e.clientY, e.deltaY < 0 ? 1.18 : 1 / 1.18, 90);
+    }, { passive: false });
+
+    return {
+      lock: function () { locked = true; },
+      unlock: function () { locked = false; }
+    };
+  }
+
+  /* ズームボタンを地図枠に付ける */
+  function addZoomControls(svg, frame) {
+    var bar = document.createElement("div");
+    bar.className = "zoombar";
+    bar.innerHTML =
+      '<button data-z="in" aria-label="拡大">＋</button>' +
+      '<button data-z="out" aria-label="縮小">−</button>' +
+      '<button data-z="all" aria-label="全体表示" class="wide">全体</button>';
+    frame.appendChild(bar);
+    bar.addEventListener("click", function (e) {
+      var z = e.target.getAttribute && e.target.getAttribute("data-z");
+      if (!z) return;
+      e.stopPropagation();
+      var r = svg.getBoundingClientRect();
+      if (z === "in") zoomAtClient(svg, r.left + r.width / 2, r.top + r.height / 2, 1.7, 160);
+      if (z === "out") zoomAtClient(svg, r.left + r.width / 2, r.top + r.height / 2, 1 / 1.7, 160);
+      if (z === "all") gotoVB(svg, svg._base, 220);
+    });
+
+    var tag = document.createElement("div");
+    tag.className = "zoom-tag";
+    frame.appendChild(tag);
+    svg._tag = tag;
+    function sync() {
+      var sc = scaleOf(svg);
+      tag.textContent = sc < 1.15 ? "全国" : "拡大 " + sc.toFixed(1) + "倍";
+      tag.classList.toggle("on", sc >= 1.15);
+    }
+    var ro = function () { requestAnimationFrame(sync); };
+    svg.addEventListener("pointerup", ro);
+    svg.addEventListener("wheel", ro);
+    bar.addEventListener("click", ro);
+    svg._syncTag = sync;
+    sync();
   }
 
   function paint(svg, fn) {
     var paths = svg.querySelectorAll(".pref");
     for (var i = 0; i < paths.length; i++) {
       var cls = fn(paths[i].getAttribute("data-id"));
-      if (cls) paths[i].setAttribute("class", "pref " + cls);
+      paths[i].setAttribute("class", "pref" + (cls ? " " + cls : ""));
     }
   }
 
-  /* 小さい県を最前面に置く透明レイヤ（タップ判定用） */
-  function addTouchLayer(svg, onTap) {
-    var g = svg._zoom;
-    var order = [];
-    var paths = g.querySelectorAll(".pref");
-    for (var i = 0; i < paths.length; i++) {
-      var b = paths[i].getBBox();
-      order.push({ d: paths[i].getAttribute("d"), id: paths[i].getAttribute("data-id"), a: b.width * b.height });
-    }
-    order.sort(function (p, q) { return q.a - p.a; });
-    var layer = document.createElementNS(NS, "g");
-    order.forEach(function (o) {
-      var h = document.createElementNS(NS, "path");
-      h.setAttribute("d", o.d);
-      h.setAttribute("class", "halo");
-      h.setAttribute("data-id", o.id);
-      layer.appendChild(h);
-    });
-    layer.addEventListener("click", function (e) {
-      var t = e.target;
-      var id = t && t.getAttribute ? t.getAttribute("data-id") : null;
-      if (id) onTap(id);
-    });
-    layer.setAttribute("class", "touch");
-    g.appendChild(layer);
-  }
-
-  function addLabel(svg, id, text, cls) {
+  function addLabel(svg, id, text) {
     var g = svg._zoom;
     var p = g.querySelector('.pref[data-id="' + id + '"]');
     if (!p) return;
@@ -246,47 +449,42 @@
     var t = document.createElementNS(NS, "text");
     t.setAttribute("x", b.x + b.width / 2);
     t.setAttribute("y", b.y + b.height / 2 + 4);
-    t.setAttribute("class", "lbl " + (cls || ""));
+    t.setAttribute("class", "lbl");
     t.textContent = text;
     g.appendChild(t);
   }
 
-  /* ---------------- home ---------------- */
+  /* =========================================================
+     ホーム
+     ========================================================= */
   function renderHome() {
     var m = masteredCount();
     el("masterNum").textContent = m;
-    if (el("masterBar")) el("masterBar").style.width = (m / 47 * 100).toFixed(1) + "%";
 
     var due = dueCount();
-    var t = todayIndex();
     touchPlay();
     var doneToday = S.today.n;
-    var goal = 10;
-    el("dueLabel").textContent = due > 0 ? due + "問たまっています" : (doneToday > 0 ? "今日は " + doneToday + "問 解きました" : "まずは10問から");
+    el("dueLabel").textContent = due > 0 ? due + "問たまっています"
+      : (doneToday > 0 ? "今日は " + doneToday + "問 解きました" : "まずは10問から");
     el("dueTitle").textContent = due > 0 ? "今日の復習" : (doneToday > 0 ? "もう少しやる" : "はじめる");
 
-    var pct = Math.min(1, doneToday / goal);
+    var pct = Math.min(1, doneToday / 10);
     var circ = 2 * Math.PI * 26;
     var ring = el("ringFill");
     ring.setAttribute("stroke-dasharray", circ.toFixed(1));
     ring.setAttribute("stroke-dashoffset", (circ * (1 - pct)).toFixed(1));
     el("ringNum").innerHTML = doneToday + "<small>問</small>";
-
-    var st = S.streak.count || 0;
-    el("streakNum").textContent = st;
+    el("streakNum").textContent = S.streak.count || 0;
 
     MODES.forEach(function (mode) {
-      var n = modeMastery(mode);
-      el("cnt-" + mode).innerHTML = n + "<b>/47</b>";
-      el("cnt-" + mode).innerHTML = "<b>" + n + "</b>/47";
+      el("cnt-" + mode).innerHTML = "<b>" + modeMastery(mode) + "</b>/47";
     });
 
-    // 地図
     var slot = el("homeMap");
     slot.innerHTML = "";
-    var svg = buildMap({});
+    var svg = buildMap();
     slot.appendChild(svg);
-    requestAnimationFrame(function () { fitAll(svg); });
+    baseView(svg);
     var paths = svg.querySelectorAll(".pref");
     for (var i = 0; i < paths.length; i++) {
       var lv = levelOf(BY_ID[paths[i].getAttribute("data-id")]);
@@ -294,10 +492,11 @@
     }
   }
 
-  /* ---------------- session ---------------- */
+  /* =========================================================
+     セッション
+     ========================================================= */
   var ses = null;
 
-  /* 出題候補を優先度順に */
   function candidates(mode) {
     var t = todayIndex();
     var list = PREF.map(function (p) {
@@ -315,7 +514,7 @@
   function buildQueue(mode, n) {
     var pool = [];
     if (mode === "mixed") {
-      var per = { map: [], capital: [], keyword: [] };
+      var per = {};
       MODES.forEach(function (m) { per[m] = candidates(m); });
       var i = 0;
       while (pool.length < n && i < 60) {
@@ -336,6 +535,7 @@
     if (!q.length) return;
     ses = { mode: mode, q: q, i: 0, right: 0, wrong: [], answered: false, tries: 0 };
     el("modeName").textContent = mode === "mixed" ? "今日の復習" : MODE_LABEL[mode] + "モード";
+    el("screen-quiz").className = "screen mode-" + mode;
     show("quiz");
     renderQ();
   }
@@ -347,7 +547,6 @@
     ses.answered = false;
     ses.tries = 0;
 
-    // progress
     var dots = "";
     for (var i = 0; i < ses.q.length; i++) {
       dots += '<i class="' + (i < ses.i ? "done" : i === ses.i ? "now" : "") + '"></i>';
@@ -381,37 +580,53 @@
     area.className = "map-area";
     var frame = document.createElement("div");
     frame.className = "map-frame";
-    var svg = buildMap({ interactive: true });
+    var svg = buildMap();
     frame.appendChild(svg);
-
-    var zone = ses.mode === "mixed" ? null : null;
-    if (S.settings.zoom === "always") zone = p.region;
-    else if (S.settings.zoom === "auto") zone = it.b < 3 ? p.region : null;
-    var tag = document.createElement("div");
-    tag.className = "zoom-tag";
-    tag.textContent = zone ? zone + "だけ表示" : "全国";
-    frame.appendChild(tag);
-
     area.appendChild(frame);
     body.appendChild(area);
 
-    addTouchLayer(svg, function (id) { onMapTap(svg, id, p); });
-    requestAnimationFrame(function () { fitAll(svg); fitZone(svg, zone); });
+    baseView(svg);
+    addZoomControls(svg, frame);
+
+    var gs = attachGestures(svg, { onTap: function (id) { onMapTap(svg, id, p); } });
     ses.svg = svg;
+    ses.gs = gs;
+
+    // 初期表示
+    var zone = null;
+    if (S.settings.zoom === "always") zone = p.region;
+    else if (S.settings.zoom === "auto") zone = it.b < 3 ? p.region : null;
+    if (zone) fitRegion(svg, zone, 0);
+    if (svg._syncTag) svg._syncTag();
+
+    // 動作確認用: ?z=3 で拡大状態から始められる
+    var zp = parseFloat(new URLSearchParams(location.search).get("z"));
+    if (zp > 1) {
+      var rc = svg.getBoundingClientRect();
+      zoomAtClient(svg, rc.left + rc.width / 2, rc.top + rc.height / 2, zp, 0);
+      if (svg._syncTag) svg._syncTag();
+    }
+
+    var hint = document.createElement("div");
+    hint.className = "map-hint";
+    hint.textContent = "ドラッグで移動 ／ ピンチか ＋ で拡大";
+    frame.appendChild(hint);
+    setTimeout(function () { if (hint.parentNode) hint.classList.add("fade"); }, 3200);
+    attachGestures.__hint = hint;
   }
 
   function onMapTap(svg, id, p) {
     if (ses.answered) return;
     if (id === p.id) {
       ses.answered = true;
+      ses.gs.lock();
       markMapOk(svg, p);
       grade(true);
       return;
     }
-    // 誤答：1回目は再挑戦させる（学習のため）。3回目で答えを開く。
     ses.tries++;
     var wrong = svg.querySelector('.pref[data-id="' + id + '"]');
-    if (wrong) { wrong.classList.add("ng"); }
+    if (wrong) { wrong.classList.add("ng"); setTimeout(function () { wrong.classList.remove("ng"); }, 700); }
     var frame = svg.parentNode;
     var old = frame.querySelector(".toast");
     if (old) old.remove();
@@ -419,11 +634,13 @@
     toast.className = "toast";
     toast.textContent = "ちがいます — 押したのは" + BY_ID[id].name;
     frame.appendChild(toast);
-    setTimeout(function () { if (toast.parentNode) toast.remove(); }, 1100);
+    setTimeout(function () { if (toast.parentNode) toast.remove(); }, 1200);
     svg.classList.add("nudge");
-    if (!S.settings.sound) {} else sndNg();
+    setTimeout(function () { svg.classList.remove("nudge"); }, 340);
+    sndNg();
     if (ses.tries >= 2) {
       ses.answered = true;
+      ses.gs.lock();
       markMapOk(svg, p);
       grade(false);
     }
@@ -432,16 +649,21 @@
   function markMapOk(svg, p) {
     var paths = svg.querySelectorAll(".pref");
     for (var i = 0; i < paths.length; i++) {
-      paths[i].classList.remove("hoverable");
       var id = paths[i].getAttribute("data-id");
-      if (id !== p.id && !paths[i].classList.contains("ng")) paths[i].classList.add("dim");
+      if (id !== p.id) paths[i].classList.add("dim");
     }
     var ans = svg.querySelector('.pref[data-id="' + p.id + '"]');
     if (ans) { ans.classList.remove("dim", "ng"); ans.classList.add("ok"); }
-    addLabel(svg, p.id, shortName(p));
-    if (S.settings.zoom !== "always") fitZone(svg, null);
-    var layer = svg.querySelector(".touch");
-    if (layer) layer.remove();
+
+    var halo = svg._zoom.querySelector(".touch");
+    if (halo) halo.setAttribute("pointer-events", "none");
+
+    // 答えが小さくて見えないときは、その県に寄る
+    if (scaleOf(svg) < 3.2) {
+      if (p.region === "北海道" || p.region === "九州") fitRegion(svg, p.region, 260);
+      else fitIds(svg, [p.id], 1.4, 260);
+    }
+    setTimeout(function () { addLabel(svg, p.id, shortName(p)); }, 160);
   }
 
   function renderCapitalQ(body, p) {
@@ -449,35 +671,33 @@
     area.className = "map-area";
     var frame = document.createElement("div");
     frame.className = "map-frame";
-    var svg = buildMap({});
+    var svg = buildMap();
     frame.appendChild(svg);
     area.appendChild(frame);
+    body.appendChild(area);
 
+    baseView(svg);
     var paths = svg.querySelectorAll(".pref");
     for (var i = 0; i < paths.length; i++) {
       if (paths[i].getAttribute("data-id") !== p.id) paths[i].classList.add("dim");
     }
     var ans = svg.querySelector('.pref[data-id="' + p.id + '"]');
-    if (ans) { ans.classList.remove("dim"); ans.style.fill = "#c3b393"; }
-    body.appendChild(area);
-    requestAnimationFrame(function () {
-      fitAll(svg);
-      fitZone(svg, p.region);
-      addLabel(svg, p.id, shortName(p), "lbl-on-light");
-    });
+    if (ans) { ans.style.fill = "#c3b393"; }
+    var halo = svg._zoom.querySelector(".touch");
+    if (halo) halo.setAttribute("pointer-events", "none");
 
-    // 選択肢：同じ地方の県庁所在地を優先
+    fitRegion(svg, p.region, 0);
+    addLabel(svg, p.id, shortName(p));
+
     var others = PREF.filter(function (x) { return x.id !== p.id; });
     var same = shuffle(others.filter(function (x) { return x.region === p.region; }));
     var diff = shuffle(others.filter(function (x) { return x.region !== p.region; }));
-    var pick = same.slice(0, 3);
-    var k = 0;
+    var pick = same.slice(0, 3), k = 0;
     while (pick.length < 3) pick.push(diff[k++]);
-    var opts = shuffle([p].concat(pick));
 
     var wrap = document.createElement("div");
     wrap.className = "opts";
-    opts.forEach(function (o) {
+    shuffle([p].concat(pick)).forEach(function (o) {
       var b = document.createElement("button");
       b.className = "opt";
       b.textContent = o.capital;
@@ -488,15 +708,14 @@
   }
 
   function renderKeywordQ(body, p) {
-    var wrap = document.createElement("div");
-    wrap.innerHTML = "";
     var chips = document.createElement("div");
     chips.className = "chips";
     p.items.forEach(function (it, i) {
       var c = document.createElement("div");
-      c.className = "chip" + (p.items.length === 5 && i === 4 && p.items[4].t.length > 9 ? " wide" : "");
+      var long = it.t.length > 9;
+      c.className = "chip" + (long ? " wide" : "");
       c.style.animationDelay = (i * 40) + "ms";
-      c.innerHTML = '<span class="cat">' + it.c + "</span><span class=\"txt\">" + it.t + "</span>";
+      c.innerHTML = '<span class="cat">' + it.c + '</span><span class="txt">' + it.t + "</span>";
       chips.appendChild(c);
     });
     body.appendChild(chips);
@@ -504,20 +723,19 @@
     var others = PREF.filter(function (x) { return x.id !== p.id; });
     var same = shuffle(others.filter(function (x) { return x.region === p.region; }));
     var diff = shuffle(others.filter(function (x) { return x.region !== p.region; }));
-    var pick = same.slice(0, 2);
-    var k = 0;
+    var pick = same.slice(0, 2), k = 0;
     while (pick.length < 3) pick.push(diff[k++]);
 
-    var wrap2 = document.createElement("div");
-    wrap2.className = "opts";
+    var wrap = document.createElement("div");
+    wrap.className = "opts";
     shuffle([p].concat(pick)).forEach(function (o) {
       var b = document.createElement("button");
       b.className = "opt";
       b.textContent = o.name;
-      b.addEventListener("click", function () { onChoose(b, o, p, "keyword", wrap2); });
-      wrap2.appendChild(b);
+      b.addEventListener("click", function () { onChoose(b, o, p, "keyword", wrap); });
+      wrap.appendChild(b);
     });
-    body.appendChild(wrap2);
+    body.appendChild(wrap);
   }
 
   function onChoose(btn, chosen, p, mode, wrap) {
@@ -533,7 +751,6 @@
     grade(ok);
   }
 
-  /* 採点 & 記録 */
   function grade(ok) {
     var cur = ses.q[ses.i];
     var p = cur.p, mode = cur.mode;
@@ -552,13 +769,9 @@
       it.d = t + 1;
       ses.wrong.push({ mode: mode, p: p });
       sndNg();
-      // 3問後に再出題（即時再学習）
       var again = ses.i + 3;
-      if (again < ses.q.length && !ses.q[again].again) {
-        ses.q.splice(again, 0, { mode: mode, p: p, again: true });
-      } else if (again < ses.q.length) {
-        ses.q.splice(again + 1, 0, { mode: mode, p: p, again: true });
-      }
+      if (again < ses.q.length && !ses.q[again].again) ses.q.splice(again, 0, { mode: mode, p: p, again: true });
+      else if (again < ses.q.length) ses.q.splice(again + 1, 0, { mode: mode, p: p, again: true });
     }
     bumpToday();
     save();
@@ -574,16 +787,15 @@
       "<span>" + p.name + " ／ 県庁所在地 " + p.capital + "</span>";
     el("nextBtn").textContent = (ses.i === ses.q.length - 1) ? "結果へ" : "次へ";
 
-    var body = el("sheetBody");
     var html = "";
     if (mode === "map" && !p.same) {
       html += '<div class="why"><span class="c">由来</span><span class="w">' + p.capWhy + "</span></div>";
     }
     p.items.forEach(function (it) {
-      html += '<div class="why"><span class="c">' + it.c + "</span><span><b>" + it.t + "</b> <span class=\"w\">— " + it.w + "</span></span></div>";
+      html += '<div class="why"><span class="c">' + it.c + '</span><span><b>' + it.t +
+        '</b> <span class="w">— ' + it.w + "</span></span></div>";
     });
-    body.innerHTML = html;
-    body.hidden = false;
+    el("sheetBody").innerHTML = html;
     el("nextBtn").focus({ preventScroll: true });
   }
 
@@ -599,14 +811,13 @@
     el("scoreTotal").textContent = "/" + total;
     var c = ses.right / total;
     el("scoreComment").textContent =
-      c === 1 ? "全問正解。この範囲はもう定着しています。次は全国モードで試すか、別のモードへ。" :
+      c === 1 ? "全問正解。この範囲はもう定着しています。次は全国で試すか、別のモードへ。" :
       c >= 0.8 ? "よく入っています。間違えた県だけ、明日もう一度出ます。" :
       c >= 0.5 ? "半分は定着。間違えた県は明日また出ます。今日はここまでで十分。" :
       "まだ手をつけた段階。間違えた県だけ、明日もう一度出ます。";
 
-    // streak
     var t = todayIndex();
-    if (S.streak.last === t) { /* 同日2回目 */ }
+    if (S.streak.last === t) {}
     else if (S.streak.last === t - 1) { S.streak.count += 1; S.streak.last = t; }
     else { S.streak.count = 1; S.streak.last = t; }
     save();
@@ -621,6 +832,7 @@
           MODE_LABEL[w.mode] + " ／ " + w.p.capital + '</span></div><div class="w">' + it0.t + " — " + it0.w + "</div></div>";
       }).join("");
     }
+    el("screen-quiz").className = "screen";
     show("result");
   }
 
@@ -646,14 +858,12 @@
     wrap.innerHTML = rows.map(function (r) {
       var d = r.it.d - t;
       var due = d <= 0 ? "今日" : d === 1 ? "明日" : d + "日後";
-      var lv = "×" + r.it.n;
       return '<div class="book-row"><span class="badge">' + MODE_LABEL[r.mode] + '</span>' +
         '<span class="nm">' + r.p.name + "<small>" + r.p.items[0].t + " ／ " + r.p.capital + "</small></span>" +
-        '<span class="due"><b>' + due + "</b>" + lv + "</span></div>";
+        '<span class="due"><b>' + due + "</b>×" + r.it.n + "</span></div>";
     }).join("");
   }
 
-  /* ---------------- settings ---------------- */
   function renderSettings() {
     el("swSound").className = "switch" + (S.settings.sound ? " on" : "");
     var segs = el("zoomSeg").querySelectorAll("button");
@@ -668,12 +878,11 @@
     S.streak = { last: null, count: 0 };
     S.today = { d: null, n: 0 };
     save();
-    renderHome();
     alert("消去しました。");
     show("home");
   }
 
-  /* ---------------- wire up ---------------- */
+  /* ---------------- init ---------------- */
   function init() {
     load();
     touchPlay();
@@ -688,7 +897,10 @@
       })(modes[i]);
     }
     el("nextBtn").addEventListener("click", nextQ);
-    el("quitBtn").addEventListener("click", function () { show("home"); });
+    el("quitBtn").addEventListener("click", function () {
+      el("screen-quiz").className = "screen";
+      show("home");
+    });
     el("againBtn").addEventListener("click", function () { startSession(ses.mode); });
     el("homeBtn").addEventListener("click", function () { show("home"); });
     el("bookBtn").addEventListener("click", function () { show("book"); });
@@ -705,15 +917,13 @@
       S.settings.zoom = v; save(); renderSettings();
     });
     el("resetBtn").addEventListener("click", resetAll);
-    el("bookReviewBtn").addEventListener("click", function () {
-      startSession("mixed");
-    });
+    el("bookReviewBtn").addEventListener("click", function () { startSession("mixed"); });
 
     document.addEventListener("keydown", function (e) {
       if (el("screen-quiz").classList.contains("active") && (e.key === "Enter" || e.key === " ")) {
         if (!el("sheet").hidden) { e.preventDefault(); nextQ(); }
       }
-      if (e.key === "Escape") show("home");
+      if (e.key === "Escape") { el("screen-quiz").className = "screen"; show("home"); }
     });
 
     renderHome();

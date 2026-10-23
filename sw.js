@@ -1,14 +1,14 @@
 /* トドケン — Service Worker
    オフラインで動かすためのキャッシュ。
    更新したら CACHE の版番号を上げること。 */
-const CACHE = "todoken-v3";
+const CACHE = "todoken-v5";
 const ASSETS = [
   "./",
   "./index.html",
-  "./app.css",
-  "./app.js",
-  "./data.js",
-  "./mapdata.js",
+  "./app.css?v=11",
+  "./app.js?v=11",
+  "./data.js?v=11",
+  "./mapdata.js?v=11",
   "./manifest.webmanifest",
   "./icon-180.png",
   "./icon-192.png",

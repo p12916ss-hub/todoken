@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>タップ判定セルフテスト</title>
+<style>
+body{margin:0;padding:14px 16px;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;background:#fffdf8;color:#20262e;font-size:11px;line-height:1.5}
+h1{font-size:14px;margin:0 0 6px;letter-spacing:.04em}
+.sum{font-family:ui-monospace,monospace;font-size:11.5px;background:#f2eee2;border:1px solid #d8d1c0;border-radius:6px;padding:8px 10px;margin-bottom:10px;white-space:pre;line-height:1.7}
+#host{position:absolute;left:-9999px;width:360px;height:420px}
+.cols{columns:3;column-gap:12px;font-family:ui-monospace,monospace;font-size:10px;line-height:1.45}
+.row{break-inside:avoid;display:flex;justify-content:space-between;gap:4px;border-bottom:1px dotted #ddd6c6;padding:1px 0}
+.ok{color:#2f7d5c}.ng{color:#b2433a;font-weight:700}
+.fail{background:#fdecea;border:1px solid #b2433a;border-radius:6px;padding:8px 10px;margin-top:10px;font-family:ui-monospace,monospace;font-size:10.5px;white-space:pre-wrap}
+</style></head>
+<body>
+<h1>トドケン タップ判定セルフテスト</h1>
+<div class="sum" id="sum">running...</div>
+<div class="cols" id="cols"></div>
+<div class="fail" id="fail" style="display:none"></div>
+<div id="host"></div>
+<script>if(navigator.serviceWorker){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(x){x.unregister()})})}</script>
+<script src="./mapdata.js?v=12"></script>
+<script src="./data.js?v=12"></script>
+<script src="./app.js?v=12"></script>
+<script>
+var out = {anchorOk:0, anchorNg:[], rndOk:0, rndNg:[], rndTotal:0, per:{}};
+var svg = window.__buildMap();
+document.getElementById("host").appendChild(svg);
+window.__baseView(svg);
+
+var W = svg.getBoundingClientRect().width, H = svg.getBoundingClientRect().height;
+function toClient(x, y) {
+  var m = svg.getScreenCTM();
+  var p = svg.createSVGPoint(); p.x = x; p.y = y;
+  var q = p.matrixTransform(m);
+  return { x: q.x, y: q.y };
+}
+function insideAll(x, y) {
+  var m = svg.getScreenCTM();
+  var p = svg.createSVGPoint(); p.x = x; p.y = y;
+  var list = [];
+  svg._paths.forEach(function (n) {
+    if (n.isPointInFill(p)) list.push(n.getAttribute("data-id"));
+  });
+  return list;
+}
+
+/* 1) 各県の代表点（データに埋め込んだ最深内部点）でタップ */
+var ids = Object.keys(MAP_ANCHORS);
+ids.forEach(function (id) {
+  var a = MAP_ANCHORS[id];
+  var c = toClient(a[0], a[1]);
+  var got = window.__hitTest(svg, c.x, c.y);
+  var ok = got === id;
+  if (ok) out.anchorOk++; else out.anchorNg.push(id + "→" + got);
+  out.per[id] = { anchor: ok, r: 0, rt: 0 };
+});
+
+/* 2) 各県の内部にランダム点を撒いて判定 */
+var seed = 12345;
+function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+ids.forEach(function (id) {
+  var n = svg._paths;
+  var path = null;
+  for (var i = 0; i < n.length; i++) if (n[i].getAttribute("data-id") === id) path = n[i];
+  var b = path.getBBox();
+  var tried = 0, used = 0;
+  while (used < 40 && tried < 400) {
+    tried++;
+    var x = b.x + b.width * rnd(), y = b.y + b.height * rnd();
+    var hit = insideAll(x, y);
+    if (hit.length !== 1 || hit[0] !== id) continue;  // 重なり/外れは除外
+    var c = toClient(x, y);
+    var got = window.__hitTest(svg, c.x, c.y);
+    used++; out.rndTotal++;
+    if (got === id) { out.rndOk++; out.per[id].r++; }
+    else out.rndNg.push(id + "@" + x.toFixed(1) + "," + y.toFixed(1) + "→" + got);
+    out.per[id].rt++;
+  }
+});
+
+document.getElementById("sum").textContent =
+  "地図サイズ " + Math.round(W) + "x" + Math.round(H) + " / 全国表示（実寸）\n" +
+  "県の代表点タップ : " + out.anchorOk + " / " + ids.length + " 一致\n" +
+  "内部ランダム点   : " + out.rndOk + " / " + out.rndTotal + " 一致\n" +
+  "判定不能（無反応）: " + (out.anchorNg.length + out.rndNg.length) + " 件";
+
+var html = "";
+ids.forEach(function (id) {
+  var r = out.per[id];
+  html += '<div class="row"><span>' + id + '</span><span class="' + (r.anchor ? "ok" : "ng") + '">' +
+    (r.anchor ? "A✓" : "A✗") + " " + r.r + "/" + r.rt + "</span></div>";
+});
+document.getElementById("cols").innerHTML = html;
+
+if (out.anchorNg.length || out.rndNg.length) {
+  var f = document.getElementById("fail");
+  f.style.display = "block";
+  f.textContent = "MISMATCH\n" + out.anchorNg.concat(out.rndNg).slice(0, 40).join("\n");
+}
+</script>
+</body></html>

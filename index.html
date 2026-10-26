@@ -13,7 +13,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <link rel="icon" href="./icon-192.png" sizes="192x192">
-<link rel="stylesheet" href="./app.css?v=12">
+<link rel="stylesheet" href="./app.css?v=20">
 </head>
 <body>
 
@@ -58,13 +58,22 @@
       </button>
       <button class="mode" data-mode="capital">
         <span class="no">02</span>
-        <span><h3>県庁所在地</h3><p>同名28県と、異名19県を分けて出題。</p></span>
+        <span><h3>県庁所在地</h3><p>都市名を答える。答え合わせで由来と街の手がかり。</p></span>
         <span class="cnt" id="cnt-capital">0/47</span>
       </button>
       <button class="mode" data-mode="keyword">
         <span class="no">03</span>
         <span><h3>名物</h3><p>5つの手がかりから県を当てる。理由つき。</p></span>
         <span class="cnt" id="cnt-keyword">0/47</span>
+      </button>
+    </div>
+
+    <p class="sect-label">発展（マスター判定には入りません）</p>
+    <div class="mode-list">
+      <button class="mode" data-mode="neighbor">
+        <span class="no">04</span>
+        <span><h3>となり県</h3><p>名前から想起して選ぶ。地図はヒントと答え合わせで。</p></span>
+        <span class="cnt" id="cnt-neighbor">0/45</span>
       </button>
     </div>
 
@@ -156,7 +165,7 @@
       <button class="btn-ghost" id="resetBtn" style="padding:10px 14px;flex:none">消去</button>
     </div>
     <p class="about">
-      トドケン v1.1<br>
+      トドケン v1.5<br>
       正解すると間隔をあけて再出題します（1日→3日→7日→16日→35日）。間違えた県は翌日と、そのセッションの3問後に戻ってきます。<br>
       地図データ：国土数値情報（行政区域）を簡略化。出典：国土交通省。<br>
       収録内容は代表例です。学習用途の参考として使い、断定は避けてください。
@@ -164,8 +173,8 @@
   </div>
 </section>
 
-<script src="./mapdata.js?v=12"></script>
-<script src="./data.js?v=12"></script>
-<script src="./app.js?v=12"></script>
+<script src="./mapdata.js?v=20"></script>
+<script src="./data.js?v=20"></script>
+<script src="./app.js?v=20"></script>
 </body>
 </html>

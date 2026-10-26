@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>隣接モード検証</title>
+<style>body{font:11px/1.5 ui-monospace,monospace;margin:0;padding:12px;background:#fffdf8;color:#20262e}
+h1{font:600 13px sans-serif;margin:0 0 8px}
+.sum{background:#f2eee2;border:1px solid #d8d1c0;border-radius:6px;padding:8px 10px;white-space:pre;margin-bottom:8px;font-size:11px}
+.bad{background:#fdecea;border:1px solid #b2433a;padding:8px;border-radius:6px;white-space:pre-wrap;margin-top:8px}
+table{border-collapse:collapse;font-size:10px}td{border-bottom:1px dotted #ddd6c6;padding:1px 6px}
+#host{position:absolute;left:-9999px}</style></head><body>
+<h1>となり県モード データ検証</h1><div class="sum" id="sum">...</div>
+<div id="tbl"></div><div id="bad" class="bad" style="display:none"></div>
+<div id="host"></div>
+<script src="./mapdata.js?v=17"></script><script src="./data.js?v=17"></script><script src="./app.js?v=17"></script>
+<script>
+var errs=[];
+/* 1) 対称性 */
+var pairs={};
+Object.keys(NEIGHBORS).forEach(function(a){
+  NEIGHBORS[a].forEach(function(b){
+    if(NEIGHBORS[b].indexOf(a)<0) errs.push("非対称 "+a+"→"+b);
+    pairs[[a,b].sort().join("-")]=1;
+  });
+});
+var np=Object.keys(pairs).length;
+if(np!==86) errs.push("ペア数 "+np+" (期待86)");
+
+/* 2) 既知の検証値 */
+var expect={nagano:8,saitama:7,gifu:7,fukushima:6,mie:6,kyoto:6,
+  hokkaido:0,okinawa:0,nagasaki:1,aomori:2,kagawa:2,kochi:2,saga:2,kagoshima:2,yamaguchi:2,
+  tokyo:4,aichi:4,chiba:3,shizuoka:4,saga:2};
+Object.keys(expect).forEach(function(k){
+  if(NEIGHBORS[k].length!==expect[k]) errs.push(k+" 次数 "+NEIGHBORS[k].length+" 期待"+expect[k]);
+});
+/* 3) 幾何との照合：陸続きペアが地図上で隣り合っているか（距離） */
+var badGeo=[];
+Object.keys(pairs).forEach(function(k){
+  if(!window.__hitTest) return;
+});
+/* 4) 橋は隣接に含まれないこと */
+NEIGHBOR_BRIDGE.forEach(function(b){
+  if(NEIGHBORS[b[0]].indexOf(b[1])>=0||NEIGHBORS[b[1]].indexOf(b[0])>=0)
+    errs.push("橋が隣接に混入 "+b[0]+"-"+b[1]);
+});
+/* 5) 全県がキーを持つ */
+PREF.forEach(function(p){ if(!NEIGHBORS.hasOwnProperty(p.id)) errs.push("欠落 "+p.id); });
+/* 6) 地図上の距離チェック：隣接ペアは近い、非隣接の陸ペアは無いか */
+var svg=window.__buildMap(); document.getElementById("host").appendChild(svg);
+window.__baseView(svg);
+function bb(id){var n=svg.querySelector('.pref[data-id="'+id+'"]');var b=n.getBBox();return b;}
+var far=[];
+Object.keys(pairs).forEach(function(k){
+  var p=k.split("-"); var a=bb(p[0]),b=bb(p[1]);
+  var dx=Math.max(0,Math.max(a.x-(b.x+b.width),b.x-(a.x+a.width)));
+  var dy=Math.max(0,Math.max(a.y-(b.y+b.height),b.y-(a.y+a.height)));
+  var gap=Math.sqrt(dx*dx+dy*dy);
+  if(gap>4) far.push(k+" gap="+gap.toFixed(1));
+});
+if(far.length) errs.push("地図上で離れた隣接ペア:\n"+far.join("\n"));
+
+document.getElementById("sum").textContent=
+ "陸続きペア数 : "+np+"\n"+
+ "次数の合計   : "+Object.keys(NEIGHBORS).reduce(function(s,k){return s+NEIGHBORS[k].length},0)+"\n"+
+ "出題対象の県 : "+NEIGHBOR_IDS.length+" 県（北海道・沖縄を除く）\n"+
+ "橋・トンネル : "+NEIGHBOR_BRIDGE.length+" 組（隣接には含めない）\n"+
+ "検証エラー   : "+errs.length+" 件";
+var rows="<table>";
+PREF.forEach(function(p){ rows+="<tr><td>"+p.name+"</td><td>"+NEIGHBORS[p.id].length+"</td><td>"+
+  NEIGHBORS[p.id].map(function(i){return BY_ID[i].name.replace(/[県府都]$/,"")}).join(" ")||"—"+"</td></tr>"; });
+document.getElementById("tbl").innerHTML=rows+"</table>";
+if(errs.length){var d=document.getElementById("bad");d.style.display="block";d.textContent="ERRORS\n"+errs.join("\n");}
+</script></body></html>

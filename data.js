@@ -15,7 +15,7 @@ const PREF = [
       { c: "食", t: "ジンギスカン", w: "開拓期に羊が飼われた名残。鉄板で焼く。" },
       { c: "地", t: "石狩平野", w: "石狩川がつくった泥炭地。排水して水田に変えた。" }
     ] },
-  { id: "aomori", name: "青森県", region: "東北", capital: "青森", same: true,
+  { id: "aomori", name: "青森県", region: "東北", capital: "青森", same: true, capWhy: "港町として開け、県庁が置かれた。城下町だったのは弘前。",
     items: [
       { c: "産", t: "りんご", w: "津軽平野。寒暖差と水はけのよい土が実を甘くする。" },
       { c: "所", t: "白神山地", w: "人の手が入っていないブナの原生林。世界自然遺産。" },
@@ -41,7 +41,7 @@ const PREF = [
       { c: "食", t: "牛タン", w: "仙台発祥とされる焼肉文化。塩で焼く。" },
       { c: "地", t: "仙台平野", w: "広瀬川と名取川がつくった平野。水田が広がる。" }
     ] },
-  { id: "akita", name: "秋田県", region: "東北", capital: "秋田", same: true,
+  { id: "akita", name: "秋田県", region: "東北", capital: "秋田", same: true, capWhy: "久保田城の城下町。佐竹氏が治めた。",
     items: [
       { c: "産", t: "あきたこまち", w: "秋田の米。寒さに強い品種として開発された。" },
       { c: "所", t: "田沢湖", w: "水深423m、日本でいちばん深い湖。" },
@@ -49,7 +49,7 @@ const PREF = [
       { c: "食", t: "きりたんぽ", w: "米を棒に巻いて焼き、鶏の鍋に入れる。" },
       { c: "地", t: "八郎潟", w: "干拓されて大潟村になった。日本の干拓の代表例。" }
     ] },
-  { id: "yamagata", name: "山形県", region: "東北", capital: "山形", same: true,
+  { id: "yamagata", name: "山形県", region: "東北", capital: "山形", same: true, capWhy: "山形城の城下町。最上氏の本拠。",
     items: [
       { c: "産", t: "さくらんぼ", w: "山形盆地。寒暖差が大きく果実が甘くなる。" },
       { c: "所", t: "蔵王の樹氷", w: "霧氷が樹木を包んで白い怪物のような形になる。" },
@@ -57,7 +57,7 @@ const PREF = [
       { c: "食", t: "芋煮", w: "里芋と牛肉の鍋。河原で食べるのが山形流。" },
       { c: "地", t: "最上川", w: "山形を横断して日本海へ。昔は舟運で栄えた。" }
     ] },
-  { id: "fukushima", name: "福島県", region: "東北", capital: "福島", same: true,
+  { id: "fukushima", name: "福島県", region: "東北", capital: "福島", same: true, capWhy: "福島城の城下町。信夫山のふもとに開けた。",
     items: [
       { c: "産", t: "桃", w: "福島盆地。日照と水はけのよい土。" },
       { c: "所", t: "磐梯山", w: "1888年の噴火で山体が崩れ、湖が生まれた。" },
@@ -101,7 +101,7 @@ const PREF = [
       { c: "食", t: "草加せんべい", w: "米を砕いて焼く。醤油だれ。" },
       { c: "地", t: "荒川", w: "秩父から東京湾へ。かつては氾濫を繰り返した。" }
     ] },
-  { id: "chiba", name: "千葉県", region: "関東", capital: "千葉", same: true,
+  { id: "chiba", name: "千葉県", region: "関東", capital: "千葉", same: true, capWhy: "千葉氏の本拠。東京湾岸の埋め立てで市域が広がった。",
     items: [
       { c: "産", t: "落花生", w: "九十九里浜周辺の砂地。水はけがよく根腐れしにくい。" },
       { c: "所", t: "成田山新勝寺", w: "初詣の参拝者数で全国有数。" },
@@ -127,7 +127,7 @@ const PREF = [
       { c: "食", t: "シウマイ", w: "横浜の中華街から広まった。" },
       { c: "地", t: "三浦半島", w: "東京湾と相模湾を分ける。海に囲まれた半島。" }
     ] },
-  { id: "niigata", name: "新潟県", region: "中部", capital: "新潟", same: true,
+  { id: "niigata", name: "新潟県", region: "中部", capital: "新潟", same: true, capWhy: "信濃川の河口港。北前船の寄港地として栄えた。",
     items: [
       { c: "産", t: "コシヒカリ", w: "信濃川の水と肥沃な土。新潟で生まれた品種。" },
       { c: "所", t: "佐渡島", w: "金山の遺跡が世界遺産。離島ながら面積は大きい。" },
@@ -135,7 +135,7 @@ const PREF = [
       { c: "食", t: "へぎそば", w: "布海苔をつなぎに使う。つるりとした喉ごし。" },
       { c: "地", t: "信濃川", w: "日本最長。長野から新潟へ抜けて日本海に注ぐ。" }
     ] },
-  { id: "toyama", name: "富山県", region: "中部", capital: "富山", same: true,
+  { id: "toyama", name: "富山県", region: "中部", capital: "富山", same: true, capWhy: "富山城の城下町。売薬の行商で全国に知られた。",
     items: [
       { c: "産", t: "ホタルイカ", w: "富山湾の深海から春に接岸。青く光る。" },
       { c: "所", t: "立山黒部アルペンルート", w: "3000m級の山を貫く交通路。雪の大谷。" },
@@ -152,7 +152,7 @@ const PREF = [
       { c: "食", t: "治部煮", w: "鴨肉をすり身でつないで煮る。加賀料理。" },
       { c: "地", t: "能登半島", w: "日本海に突き出る。外浦と内浦で海が違う。" }
     ] },
-  { id: "fukui", name: "福井県", region: "中部", capital: "福井", same: true,
+  { id: "fukui", name: "福井県", region: "中部", capital: "福井", same: true, capWhy: "福井城の城下町。越前松平家が治めた。",
     items: [
       { c: "産", t: "越前がに", w: "冬のズワイガニ。水揚げ港でブランド化。" },
       { c: "所", t: "東尋坊", w: "柱状節理の崖。波で削られてできた。" },
@@ -169,7 +169,7 @@ const PREF = [
       { c: "食", t: "ほうとう", w: "平たい麺を味噌で煮込む。小麦の産地ならでは。" },
       { c: "地", t: "甲府盆地", w: "三方を山に囲まれた盆地。夏は暑く冬は冷える。" }
     ] },
-  { id: "nagano", name: "長野県", region: "中部", capital: "長野", same: true,
+  { id: "nagano", name: "長野県", region: "中部", capital: "長野", same: true, capWhy: "善光寺の門前町。城下町は松代にあった。",
     items: [
       { c: "産", t: "レタス", w: "高原の冷涼な気候。夏でも涼しく育つ。" },
       { c: "所", t: "善光寺", w: "宗派を持たない寺。多くの人が参拝する。" },
@@ -177,7 +177,7 @@ const PREF = [
       { c: "食", t: "信州そば", w: "冷涼な気候と水。そばの産地として有名。" },
       { c: "地", t: "千曲川", w: "信濃川の上流。長野盆地を流れる。" }
     ] },
-  { id: "gifu", name: "岐阜県", region: "中部", capital: "岐阜", same: true,
+  { id: "gifu", name: "岐阜県", region: "中部", capital: "岐阜", same: true, capWhy: "金華山のふもと。織田信長が「岐阜」と名づけたとされる。",
     items: [
       { c: "産", t: "飛騨牛", w: "飛騨地方の和牛。山あいの水と飼育環境。" },
       { c: "所", t: "白川郷", w: "合掌造り。雪が落ちやすい急勾配の屋根。世界遺産。" },
@@ -185,7 +185,7 @@ const PREF = [
       { c: "食", t: "五平餅", w: "米をつぶして串に巻き、味噌だれで焼く。" },
       { c: "地", t: "木曽川", w: "木曽谷を流れ濃尾平野へ。木曽三川のひとつ。" }
     ] },
-  { id: "shizuoka", name: "静岡県", region: "中部", capital: "静岡", same: true,
+  { id: "shizuoka", name: "静岡県", region: "中部", capital: "静岡", same: true, capWhy: "駿府城の城下町。徳川家康が晩年を過ごした。",
     items: [
       { c: "産", t: "茶", w: "牧之原台地。温暖と日照、水はけのよい台地。" },
       { c: "所", t: "富士山", w: "静岡側は駿河湾まで一気に下る。" },
@@ -220,7 +220,7 @@ const PREF = [
       { c: "食", t: "鮒ずし", w: "琵琶湖の鮒を塩と米で漬ける。熟鮓。" },
       { c: "地", t: "琵琶湖", w: "日本最大の湖。近畿の水がめと呼ばれる。" }
     ] },
-  { id: "kyoto", name: "京都府", region: "近畿", capital: "京都", same: true,
+  { id: "kyoto", name: "京都府", region: "近畿", capital: "京都", same: true, capWhy: "794年の平安京以来、1000年以上の都。",
     items: [
       { c: "産", t: "京野菜", w: "賀茂なす・聖護院かぶなど。都の食文化が育てた。" },
       { c: "所", t: "清水寺", w: "舞台から市街を見下ろす。世界遺産。" },
@@ -228,7 +228,7 @@ const PREF = [
       { c: "食", t: "湯豆腐", w: "昆布だしで豆腐を温める。精進料理の流れ。" },
       { c: "地", t: "鴨川", w: "市街を南北に流れる。河原が人の集まる場に。" }
     ] },
-  { id: "osaka", name: "大阪府", region: "近畿", capital: "大阪", same: true,
+  { id: "osaka", name: "大阪府", region: "近畿", capital: "大阪", same: true, capWhy: "大坂城の城下町。水運の要として栄えた。",
     items: [
       { c: "産", t: "泉州たまねぎ", w: "泉州の砂質土。水はけがよく甘くなる。" },
       { c: "所", t: "大阪城", w: "豊臣秀吉が築いた。天守は復興。" },
@@ -245,7 +245,7 @@ const PREF = [
       { c: "食", t: "明石焼き", w: "たこ入りの生地をだし汁につけて食べる。" },
       { c: "地", t: "瀬戸内海", w: "島が多く波が穏やか。塩田と海運が栄えた。" }
     ] },
-  { id: "nara", name: "奈良県", region: "近畿", capital: "奈良", same: true,
+  { id: "nara", name: "奈良県", region: "近畿", capital: "奈良", same: true, capWhy: "平城京。奈良時代の都が置かれた。",
     items: [
       { c: "産", t: "大和茶", w: "大和高原の冷涼さと霧。茶の栽培に適す。" },
       { c: "所", t: "東大寺の大仏", w: "奈良の大仏。天平の技術の集大成。" },
@@ -253,7 +253,7 @@ const PREF = [
       { c: "食", t: "柿の葉寿司", w: "柿の葉で包んで保存性を高めた。紀伊半島の郷土食。" },
       { c: "地", t: "奈良盆地", w: "山に囲まれた盆地。古代の都が置かれた。" }
     ] },
-  { id: "wakayama", name: "和歌山県", region: "近畿", capital: "和歌山", same: true,
+  { id: "wakayama", name: "和歌山県", region: "近畿", capital: "和歌山", same: true, capWhy: "和歌山城の城下町。紀州徳川家の本拠。",
     items: [
       { c: "産", t: "梅", w: "紀伊半島の温暖な気候。梅干しの主産地。" },
       { c: "所", t: "高野山", w: "弘法大師が開いた真言密教の聖地。世界遺産。" },
@@ -261,7 +261,7 @@ const PREF = [
       { c: "食", t: "和歌山ラーメン", w: "豚骨醤油。早すしと一緒に食べる文化。" },
       { c: "地", t: "紀伊山地", w: "雨が多く、吉野川などが深い谷を刻む。" }
     ] },
-  { id: "tottori", name: "鳥取県", region: "中国", capital: "鳥取", same: true,
+  { id: "tottori", name: "鳥取県", region: "中国", capital: "鳥取", same: true, capWhy: "鳥取城の城下町。池田氏が治めた。",
     items: [
       { c: "産", t: "二十世紀梨", w: "鳥取で育成された青梨。みずみずしい。" },
       { c: "所", t: "鳥取砂丘", w: "海からの風が砂を運び続ける。日本最大の砂丘。" },
@@ -278,7 +278,7 @@ const PREF = [
       { c: "食", t: "出雲そば", w: "殻ごと挽く挽きぐるみ。色が濃く香りが強い。" },
       { c: "地", t: "宍道湖", w: "海水と淡水が混じる汽水湖。しじみが育つ。" }
     ] },
-  { id: "okayama", name: "岡山県", region: "中国", capital: "岡山", same: true,
+  { id: "okayama", name: "岡山県", region: "中国", capital: "岡山", same: true, capWhy: "岡山城の城下町。後楽園は藩主池田家の庭。",
     items: [
       { c: "産", t: "桃", w: "岡山盆地。日照時間が長く雨が少ない。" },
       { c: "所", t: "後楽園", w: "日本三名園。大名庭園の様式を残す。" },
@@ -286,7 +286,7 @@ const PREF = [
       { c: "食", t: "きびだんご", w: "桃太郎伝説と結びついた土産。" },
       { c: "地", t: "吉備高原", w: "中国山地と瀬戸内の間の高原。古墳が多い。" }
     ] },
-  { id: "hiroshima", name: "広島県", region: "中国", capital: "広島", same: true,
+  { id: "hiroshima", name: "広島県", region: "中国", capital: "広島", same: true, capWhy: "広島城の城下町。毛利氏のち浅野氏が治めた。",
     items: [
       { c: "産", t: "牡蠣", w: "瀬戸内海の穏やかな波と豊富な栄養。" },
       { c: "所", t: "厳島神社", w: "海に立つ大鳥居。満潮で水に浮いて見える。世界遺産。" },
@@ -294,7 +294,7 @@ const PREF = [
       { c: "食", t: "お好み焼き", w: "キャベツと麺を重ねる広島焼き。" },
       { c: "地", t: "太田川", w: "三角州に市街地が広がる。水の都と呼ばれる。" }
     ] },
-  { id: "yamaguchi", name: "山口県", region: "中国", capital: "山口", same: true,
+  { id: "yamaguchi", name: "山口県", region: "中国", capital: "山口", same: true, capWhy: "大内氏の本拠。西の京と呼ばれた。",
     items: [
       { c: "産", t: "夏みかん", w: "萩の温暖な気候。江戸時代に栽培が広がった。" },
       { c: "所", t: "錦帯橋", w: "5連の木造アーチ橋。増水時に流れを逃がす構造。" },
@@ -302,7 +302,7 @@ const PREF = [
       { c: "食", t: "ふぐ", w: "下関はふぐの水揚げと加工の拠点。" },
       { c: "地", t: "秋吉台", w: "石灰岩が雨で溶けたカルスト台地。鍾乳洞がある。" }
     ] },
-  { id: "tokushima", name: "徳島県", region: "四国", capital: "徳島", same: true,
+  { id: "tokushima", name: "徳島県", region: "四国", capital: "徳島", same: true, capWhy: "徳島城の城下町。藍の集散地として栄えた。",
     items: [
       { c: "産", t: "すだち", w: "徳島はすだちの主産地。香りが強い。" },
       { c: "所", t: "鳴門の渦潮", w: "瀬戸内海と紀伊水道の潮位差で渦ができる。" },
@@ -328,7 +328,7 @@ const PREF = [
       { c: "食", t: "鯛めし", w: "宇和島式は生卵を混ぜる。松山式は炊き込み。" },
       { c: "地", t: "石鎚山", w: "西日本最高峰。鎖場のある信仰の山。" }
     ] },
-  { id: "kochi", name: "高知県", region: "四国", capital: "高知", same: true,
+  { id: "kochi", name: "高知県", region: "四国", capital: "高知", same: true, capWhy: "高知城の城下町。山内氏が治めた。",
     items: [
       { c: "産", t: "ゆず", w: "山あいの傾斜地。寒暖差で香りが強くなる。" },
       { c: "所", t: "四万十川", w: "本流に大きなダムがない「最後の清流」。" },
@@ -336,7 +336,7 @@ const PREF = [
       { c: "食", t: "かつおのたたき", w: "表面を炙り、塩かたれで食べる。" },
       { c: "地", t: "室戸岬", w: "太平洋に突き出る。台風がよく上陸する。" }
     ] },
-  { id: "fukuoka", name: "福岡県", region: "九州", capital: "福岡", same: true,
+  { id: "fukuoka", name: "福岡県", region: "九州", capital: "福岡", same: true, capWhy: "福岡城の城下町。黒田氏の本拠。博多と接する。",
     items: [
       { c: "産", t: "あまおう", w: "福岡生まれのいちご。粒が大きく甘い。" },
       { c: "所", t: "太宰府天満宮", w: "菅原道真を祀る。梅の名所。" },
@@ -344,7 +344,7 @@ const PREF = [
       { c: "食", t: "博多ラーメン", w: "細麺と豚骨スープ。替え玉の文化。" },
       { c: "地", t: "筑紫平野", w: "筑後川がつくった九州最大の平野。米作が盛ん。" }
     ] },
-  { id: "saga", name: "佐賀県", region: "九州", capital: "佐賀", same: true,
+  { id: "saga", name: "佐賀県", region: "九州", capital: "佐賀", same: true, capWhy: "佐賀城の城下町。鍋島氏が治めた。",
     items: [
       { c: "産", t: "たまねぎ", w: "有明海の干拓地。粘土質の土が甘みを出す。" },
       { c: "所", t: "吉野ヶ里遺跡", w: "弥生時代の大規模集落。環濠と物見櫓。" },
@@ -352,7 +352,7 @@ const PREF = [
       { c: "食", t: "佐賀牛", w: "佐賀で肥育された和牛。脂の融点が低い。" },
       { c: "地", t: "有明海", w: "干満の差が6mに達する。干潟が広がる。" }
     ] },
-  { id: "nagasaki", name: "長崎県", region: "九州", capital: "長崎", same: true,
+  { id: "nagasaki", name: "長崎県", region: "九州", capital: "長崎", same: true, capWhy: "出島の貿易都市。鎖国下でも海外に開かれていた。",
     items: [
       { c: "産", t: "じゃがいも", w: "温暖なので春と秋の二期作ができる。" },
       { c: "所", t: "軍艦島", w: "海底炭鉱の島。世界遺産。" },
@@ -360,7 +360,7 @@ const PREF = [
       { c: "食", t: "ちゃんぽん", w: "肉・魚・野菜を一度に煮る。中華と和の混交。" },
       { c: "地", t: "五島列島", w: "九州の西の海に連なる島々。教会が多い。" }
     ] },
-  { id: "kumamoto", name: "熊本県", region: "九州", capital: "熊本", same: true,
+  { id: "kumamoto", name: "熊本県", region: "九州", capital: "熊本", same: true, capWhy: "熊本城の城下町。加藤氏のち細川氏が治めた。",
     items: [
       { c: "産", t: "すいか", w: "植木町など。温暖で日照が多い。" },
       { c: "所", t: "阿蘇山", w: "世界有数のカルデラ。中岳は今も噴火を続ける。" },
@@ -368,7 +368,7 @@ const PREF = [
       { c: "食", t: "馬刺し", w: "霜降りで淡白。醤油と生姜で食べる。" },
       { c: "地", t: "阿蘇のカルデラ", w: "火山の噴出でできた巨大なくぼ地。草原が広がる。" }
     ] },
-  { id: "oita", name: "大分県", region: "九州", capital: "大分", same: true,
+  { id: "oita", name: "大分県", region: "九州", capital: "大分", same: true, capWhy: "大分城の城下町。古くは府内と呼ばれた。",
     items: [
       { c: "産", t: "かぼす", w: "大分で栽培が広まった柑橘。香り高い。" },
       { c: "所", t: "別府温泉", w: "源泉数と湧出量が日本有数。地獄めぐり。" },
@@ -376,7 +376,7 @@ const PREF = [
       { c: "食", t: "とり天", w: "鶏肉に衣をつけて揚げる。大分の郷土料理。" },
       { c: "地", t: "国東半島", w: "火山の山々と入り江。六郷満山の文化が残る。" }
     ] },
-  { id: "miyazaki", name: "宮崎県", region: "九州", capital: "宮崎", same: true,
+  { id: "miyazaki", name: "宮崎県", region: "九州", capital: "宮崎", same: true, capWhy: "明治に県庁が置かれて発展した街。城下町ではない。",
     items: [
       { c: "産", t: "マンゴー", w: "完熟で収穫する。ビニールハウスで温度管理。" },
       { c: "所", t: "高千穂峡", w: "阿蘇の火砕流が川に削られた柱状節理の峡谷。" },
@@ -384,7 +384,7 @@ const PREF = [
       { c: "食", t: "チキン南蛮", w: "揚げた鶏に甘酢とタルタル。延岡発祥とされる。" },
       { c: "地", t: "宮崎平野", w: "黒潮の影響で冬も暖かい。農業が盛ん。" }
     ] },
-  { id: "kagoshima", name: "鹿児島県", region: "九州", capital: "鹿児島", same: true,
+  { id: "kagoshima", name: "鹿児島県", region: "九州", capital: "鹿児島", same: true, capWhy: "鹿児島城（鶴丸城）の城下町。島津氏の本拠。",
     items: [
       { c: "産", t: "さつまいも", w: "シラス台地は水はけがよく、芋の栽培に適す。" },
       { c: "所", t: "桜島", w: "今も噴火を続ける火山。市街地のすぐそば。" },
@@ -404,3 +404,279 @@ const PREF = [
 ];
 
 const CAT_LABEL = { "産": "産物", "所": "名所", "文": "文化", "食": "食べもの", "地": "地理" };
+
+/* 隣接（陸続きのみ）。トンネル・橋は別扱い。
+   出典: 都道府県の隣接関係について一般的に流通している一覧にもとづき、
+   陸地で接するものだけを収録（橋・トンネルは NEIGHBOR_BRIDGE）。 */
+const NEIGHBORS = {
+"hokkaido": [],
+"aomori": [
+"iwate",
+"akita"
+],
+"iwate": [
+"aomori",
+"miyagi",
+"akita"
+],
+"miyagi": [
+"iwate",
+"akita",
+"yamagata",
+"fukushima"
+],
+"akita": [
+"aomori",
+"iwate",
+"miyagi",
+"yamagata"
+],
+"yamagata": [
+"miyagi",
+"akita",
+"fukushima",
+"niigata"
+],
+"fukushima": [
+"miyagi",
+"yamagata",
+"ibaraki",
+"tochigi",
+"gunma",
+"niigata"
+],
+"ibaraki": [
+"fukushima",
+"tochigi",
+"saitama",
+"chiba"
+],
+"tochigi": [
+"fukushima",
+"gunma",
+"saitama",
+"ibaraki"
+],
+"gunma": [
+"fukushima",
+"tochigi",
+"saitama",
+"nagano",
+"niigata"
+],
+"saitama": [
+"tochigi",
+"gunma",
+"ibaraki",
+"chiba",
+"tokyo",
+"yamanashi",
+"nagano"
+],
+"chiba": [
+"ibaraki",
+"saitama",
+"tokyo"
+],
+"tokyo": [
+"saitama",
+"chiba",
+"kanagawa",
+"yamanashi"
+],
+"kanagawa": [
+"tokyo",
+"yamanashi",
+"shizuoka"
+],
+"niigata": [
+"yamagata",
+"fukushima",
+"gunma",
+"toyama",
+"nagano"
+],
+"toyama": [
+"niigata",
+"ishikawa",
+"nagano",
+"gifu"
+],
+"ishikawa": [
+"toyama",
+"fukui",
+"gifu"
+],
+"fukui": [
+"ishikawa",
+"gifu",
+"shiga",
+"kyoto"
+],
+"yamanashi": [
+"saitama",
+"tokyo",
+"kanagawa",
+"nagano",
+"shizuoka"
+],
+"nagano": [
+"gunma",
+"saitama",
+"niigata",
+"toyama",
+"yamanashi",
+"shizuoka",
+"gifu",
+"aichi"
+],
+"gifu": [
+"toyama",
+"ishikawa",
+"fukui",
+"nagano",
+"aichi",
+"mie",
+"shiga"
+],
+"shizuoka": [
+"kanagawa",
+"yamanashi",
+"nagano",
+"aichi"
+],
+"aichi": [
+"nagano",
+"gifu",
+"shizuoka",
+"mie"
+],
+"mie": [
+"gifu",
+"aichi",
+"shiga",
+"kyoto",
+"nara",
+"wakayama"
+],
+"shiga": [
+"fukui",
+"gifu",
+"mie",
+"kyoto"
+],
+"kyoto": [
+"fukui",
+"mie",
+"shiga",
+"osaka",
+"hyogo",
+"nara"
+],
+"osaka": [
+"kyoto",
+"hyogo",
+"nara",
+"wakayama"
+],
+"hyogo": [
+"kyoto",
+"osaka",
+"tottori",
+"okayama"
+],
+"nara": [
+"mie",
+"kyoto",
+"osaka",
+"wakayama"
+],
+"wakayama": [
+"mie",
+"osaka",
+"nara"
+],
+"tottori": [
+"hyogo",
+"shimane",
+"okayama",
+"hiroshima"
+],
+"shimane": [
+"tottori",
+"hiroshima",
+"yamaguchi"
+],
+"okayama": [
+"hyogo",
+"tottori",
+"hiroshima"
+],
+"hiroshima": [
+"tottori",
+"shimane",
+"okayama",
+"yamaguchi"
+],
+"yamaguchi": [
+"shimane",
+"hiroshima"
+],
+"tokushima": [
+"kagawa",
+"ehime",
+"kochi"
+],
+"kagawa": [
+"tokushima",
+"ehime"
+],
+"ehime": [
+"tokushima",
+"kagawa",
+"kochi"
+],
+"kochi": [
+"tokushima",
+"ehime"
+],
+"fukuoka": [
+"saga",
+"kumamoto",
+"oita"
+],
+"saga": [
+"fukuoka",
+"nagasaki"
+],
+"nagasaki": [
+"saga"
+],
+"kumamoto": [
+"fukuoka",
+"oita",
+"miyazaki",
+"kagoshima"
+],
+"oita": [
+"fukuoka",
+"kumamoto",
+"miyazaki"
+],
+"miyazaki": [
+"kumamoto",
+"oita",
+"kagoshima"
+],
+"kagoshima": [
+"kumamoto",
+"miyazaki"
+],
+"okinawa": []
+};
+
+/* 海をまたぐ接続（学習上は「隣接ではない」と区別する） */
+const NEIGHBOR_BRIDGE = [["aomori", "hokkaido", "青函トンネル"], ["chiba", "kanagawa", "東京湾アクアライン"], ["hyogo", "tokushima", "大鳴門橋"], ["okayama", "kagawa", "瀬戸大橋"], ["hiroshima", "ehime", "しまなみ海道"], ["yamaguchi", "fukuoka", "関門トンネル・関門橋"]];
+
+/* 隣接モードで出題できる県（接する県が1つ以上ある県） */
+const NEIGHBOR_IDS = PREF.filter(function (p) { return (NEIGHBORS[p.id] || []).length > 0; }).map(function (p) { return p.id; });

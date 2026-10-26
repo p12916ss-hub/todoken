@@ -182,11 +182,48 @@ svg.jp .pref.dim{fill:var(--map-dim)}
 svg.jp .pref.ok{fill:var(--ok)}
 svg.jp .pref.ng{fill:var(--ng)}
 svg.jp .pref.hint{fill:#d9c9a4}
+svg.jp .pref.target{fill:#3c434b}
+svg.jp .pref.sel{fill:#456d9c}
+svg.jp .pref.missed{fill:#c8952f}
 svg.jp .halo{fill:transparent;stroke:transparent;stroke-width:7;pointer-events:all;cursor:pointer}
 svg.jp .lbl{font-family:var(--sans);font-size:11px;font-weight:700;fill:#fff;text-anchor:middle;
   pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.28);stroke-width:2.6;letter-spacing:.02em}
 
 /* options */
+/* となり県：名前グリッド */
+.nb-wrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.nb-hintrow{flex:none;display:flex;justify-content:flex-end}
+.nb-hint{font-size:10.5px;letter-spacing:.06em;color:var(--indigo);
+  background:rgba(27,58,88,.06);border:1px solid rgba(27,58,88,.18);
+  border-radius:99px;padding:6px 13px}
+.nb-hint.used{background:rgba(168,130,60,.1);border-color:rgba(168,130,60,.35);color:#7a5c1f}
+.namegrid{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:10px}
+.namegrid.shrink{flex:none;max-height:132px}
+.ng-head{font-size:9px;letter-spacing:.16em;color:var(--muted);font-weight:600;
+  margin:6px 0 4px;padding-left:2px}
+.ng-head:first-child{margin-top:0}
+.ng-row{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:2px}
+.namebtn{padding:9px 4px;border:1px solid var(--line);border-radius:7px;background:#fffdf7;
+  font-size:12.5px;letter-spacing:.02em;transition:background .12s,border-color .12s,color .12s}
+.namebtn:active{transform:scale(.98)}
+.namebtn.on{background:var(--indigo);border-color:var(--indigo);color:#fff}
+.namebtn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.namebtn.missed{background:rgba(168,130,60,.16);border-color:rgba(168,130,60,.55);color:#7a5c1f;font-weight:700}
+.namebtn.ng{background:rgba(178,67,58,.1);border-color:rgba(178,67,58,.5);color:var(--ng);text-decoration:line-through}
+.namebtn:disabled{cursor:default}
+.nb-mapwrap{flex:1;min-height:0;display:flex}
+.nb-mapwrap[hidden]{display:none}
+.nb-mapwrap .map-frame{flex:1}
+
+.decide-bar{display:flex;align-items:center;gap:10px;flex:none;padding-top:1px}
+.sel-count{flex:1;font-size:11.5px;color:var(--muted);letter-spacing:.06em;
+  font-variant-numeric:tabular-nums}
+.decide-btn{background:var(--indigo);color:#f7f3e8;border-radius:11px;padding:12px 24px;
+  font-size:13px;font-weight:700;letter-spacing:.08em;transition:opacity .15s,transform .12s}
+.decide-btn:active{transform:scale(.97)}
+.decide-btn:disabled{opacity:.35}
+
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding-bottom:8px}
 .opt{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r-md);
   padding:17px 8px;font-size:16px;font-weight:600;letter-spacing:.04em;
@@ -281,6 +318,10 @@ svg.jp .lbl{font-family:var(--sans);font-size:11px;font-weight:700;fill:#fff;tex
 .danger{color:var(--accent)}
 .about{font-size:10.5px;color:var(--muted);line-height:1.85;padding:14px 2px 0}
 
+#screen-quiz.mode-neighbor .prompt{min-height:0;padding-bottom:8px}
+#screen-quiz.mode-neighbor .prompt .sub{font-size:9.5px;margin-bottom:1px}
+#screen-quiz.mode-neighbor .prompt .main{font-size:25px}
+#screen-quiz.mode-neighbor .dots{padding-bottom:10px}
 #screen-quiz.mode-map .prompt{min-height:0;padding-bottom:8px}
 #screen-quiz.mode-map .prompt .sub{font-size:9.5px;margin-bottom:1px}
 #screen-quiz.mode-map .prompt .main{font-size:25px}

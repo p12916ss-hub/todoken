@@ -70,7 +70,7 @@
   /* ---------------- prefecture helpers ---------------- */
   var BY_ID = {};
   PREF.forEach(function (p) { BY_ID[p.id] = p; });
-  var MODE_LABEL = { map: "地図", capital: "県庁所在地", keyword: "名物" };
+  var MODE_LABEL = { map: "地図", capital: "県庁所在地", keyword: "名物", neighbor: "となり県" };
   var MODES = ["map", "capital", "keyword"];
 
   function shortName(p) { return p.name.replace(/[県府都]$/, ""); }
@@ -102,7 +102,11 @@
   }
   function modeMastery(mode) {
     var n = 0;
-    PREF.forEach(function (p) { if (getItem(mode, p.id).b >= 4) n++; });
+    var scope = (mode === "neighbor" && typeof NEIGHBOR_IDS !== "undefined") ? NEIGHBOR_IDS : null;
+    PREF.forEach(function (p) {
+      if (scope && scope.indexOf(p.id) < 0) return;
+      if (getItem(mode, p.id).b >= 4) n++;
+    });
     return n;
   }
 
@@ -501,6 +505,9 @@
     MODES.forEach(function (mode) {
       el("cnt-" + mode).innerHTML = "<b>" + modeMastery(mode) + "</b>/47";
     });
+    var nEl = el("cnt-neighbor");
+    if (nEl) nEl.innerHTML = "<b>" + modeMastery("neighbor") + "</b>/" +
+      (typeof NEIGHBOR_IDS !== "undefined" ? NEIGHBOR_IDS.length : 45);
 
     var slot = el("homeMap");
     slot.innerHTML = "";
@@ -547,6 +554,9 @@
       }
     } else {
       var c = candidates(mode);
+      if (mode === "neighbor" && typeof NEIGHBOR_IDS !== "undefined") {
+        c = c.filter(function (x) { return NEIGHBOR_IDS.indexOf(x.p.id) >= 0; });
+      }
       for (var j = 0; j < c.length && pool.length < n; j++) pool.push({ mode: mode, p: c[j].p });
     }
     return shuffle(pool).slice(0, n);
@@ -556,7 +566,7 @@
     var q = buildQueue(mode, SESSION_SIZE);
     if (!q.length) return;
     ses = { mode: mode, q: q, i: 0, right: 0, wrong: [], answered: false, tries: 0 };
-    el("modeName").textContent = mode === "mixed" ? "今日の復習" : MODE_LABEL[mode] + "モード";
+    el("modeName").textContent = mode === "mixed" ? "今日の復習" : (mode === "neighbor" ? "となり県モード" : MODE_LABEL[mode] + "モード");
     el("screen-quiz").className = "screen mode-" + mode;
     show("quiz");
     renderQ();
@@ -590,6 +600,10 @@
       el("promptSub").textContent = p.same ? "県名と同名の県庁所在地" : "県名と違う名前の県庁所在地";
       el("promptMain").innerHTML = p.name + '<span class="tag">' + p.region + "</span>";
       renderCapitalQ(body, p);
+    } else if (mode === "neighbor") {
+      el("promptSub").textContent = "接する県をすべて選べ（陸続き）";
+      el("promptMain").innerHTML = p.name + '<span class="tag">' + p.region + "</span>";
+      renderNeighborQ(body, p);
     } else {
       el("promptSub").textContent = "5つの手がかりから";
       el("promptMain").innerHTML = 'この県は？<span class="tag">' + p.region + "</span>";
@@ -723,6 +737,158 @@
     body.appendChild(wrap);
   }
 
+  /* となり県: 地図を見せず、県名から想起して選ぶ。
+     地図は「ヒント」と「答え合わせ」でだけ出す。
+     地図を見ながら周りをなぞるだけでは学習にならないため。 */
+  function renderNeighborQ(body, p) {
+    var wrap = document.createElement("div");
+    wrap.className = "nb-wrap";
+    body.appendChild(wrap);
+
+    var hintRow = document.createElement("div");
+    hintRow.className = "nb-hintrow";
+    var mapBtn = document.createElement("button");
+    mapBtn.className = "nb-hint";
+    mapBtn.textContent = "地図を見る（ヒント）";
+    hintRow.appendChild(mapBtn);
+    wrap.appendChild(hintRow);
+
+    var grid = document.createElement("div");
+    grid.className = "namegrid";
+    var REGS = ["北海道", "東北", "関東", "中部", "近畿", "中国", "四国", "九州"];
+    REGS.forEach(function (rg) {
+      var group = PREF.filter(function (x) { return x.region === rg; });
+      if (!group.length) return;
+      var head = document.createElement("div");
+      head.className = "ng-head";
+      head.textContent = rg;
+      grid.appendChild(head);
+      var row = document.createElement("div");
+      row.className = "ng-row";
+      group.forEach(function (x) {
+        if (x.id === p.id) return;
+        var b = document.createElement("button");
+        b.className = "namebtn";
+        b.setAttribute("data-id", x.id);
+        b.textContent = shortName(x);
+        row.appendChild(b);
+      });
+      grid.appendChild(row);
+    });
+    wrap.appendChild(grid);
+
+    var mapWrap = document.createElement("div");
+    mapWrap.className = "nb-mapwrap";
+    mapWrap.hidden = true;
+    var frame = document.createElement("div");
+    frame.className = "map-frame";
+    var svg = buildMap();
+    frame.appendChild(svg);
+    mapWrap.appendChild(frame);
+    wrap.appendChild(mapWrap);
+    baseView(svg);
+    var paths = svg.querySelectorAll(".pref");
+    for (var i = 0; i < paths.length; i++) {
+      if (paths[i].getAttribute("data-id") === p.id) paths[i].classList.add("target");
+      else paths[i].classList.add("dim");
+    }
+    addLabel(svg, p.id, shortName(p));
+
+    var bar = document.createElement("div");
+    bar.className = "decide-bar";
+    var cnt = document.createElement("span");
+    cnt.className = "sel-count";
+    cnt.textContent = "0 県 選択";
+    var btn = document.createElement("button");
+    btn.className = "decide-btn";
+    btn.textContent = "決定";
+    btn.disabled = true;
+    bar.appendChild(cnt); bar.appendChild(btn);
+    wrap.appendChild(bar);
+
+    var sel = {};
+    ses.sel = sel;
+    ses.nSvg = svg;
+    ses.decideBtn = btn;
+    ses.nGrid = grid;
+    ses.nMapWrap = mapWrap;
+    ses.nHint = false;
+
+    function refresh() {
+      var k = Object.keys(sel).length;
+      cnt.textContent = k + " 県 選択";
+      btn.disabled = k === 0;
+    }
+
+    grid.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t || !t.getAttribute) return;
+      var id = t.getAttribute("data-id");
+      if (!id || ses.answered) return;
+      if (sel[id]) { delete sel[id]; t.classList.remove("on"); }
+      else { sel[id] = 1; t.classList.add("on"); }
+      refresh();
+    });
+
+    mapBtn.addEventListener("click", function () {
+      var showIt = ses.nMapWrap.hidden;
+      ses.nMapWrap.hidden = !showIt;
+      ses.nHint = ses.nHint || showIt;
+      mapBtn.textContent = showIt ? "地図を隠す" : "地図を見る（ヒント）";
+      mapBtn.classList.toggle("used", ses.nHint);
+      if (showIt) {
+        grid.classList.add("shrink");
+        mapBtn.textContent = "地図を隠す";
+      } else {
+        grid.classList.remove("shrink");
+      }
+    });
+
+    btn.addEventListener("click", function () { judgeNeighbor(svg, p, sel); });
+  }
+
+  function judgeNeighbor(svg, p, sel) {
+    if (ses.answered) return;
+    ses.answered = true;
+
+    if (ses.nMapWrap) ses.nMapWrap.hidden = false;
+    if (ses.nGrid) ses.nGrid.classList.add("shrink", "graded");
+
+    var correct = NEIGHBORS[p.id] || [];
+    var missed = correct.filter(function (id) { return !sel[id]; });
+    var extra = Object.keys(sel).filter(function (id) { return correct.indexOf(id) < 0; });
+    var ok = missed.length === 0 && extra.length === 0;
+
+    correct.forEach(function (id) {
+      var n = svg.querySelector('.pref[data-id="' + id + '"]');
+      if (!n) return;
+      n.classList.remove("dim", "sel");
+      n.classList.add(sel[id] ? "ok" : "missed");
+      addLabel(svg, id, shortName(BY_ID[id]));
+    });
+    extra.forEach(function (id) {
+      var n = svg.querySelector('.pref[data-id="' + id + '"]');
+      if (!n) return;
+      n.classList.remove("dim", "sel");
+      n.classList.add("ng");
+      addLabel(svg, id, shortName(BY_ID[id]));
+    });
+
+    if (ses.nGrid) {
+      var bs = ses.nGrid.querySelectorAll(".namebtn");
+      for (var q = 0; q < bs.length; q++) {
+        var bid = bs[q].getAttribute("data-id");
+        bs[q].classList.remove("on");
+        if (correct.indexOf(bid) >= 0) bs[q].classList.add(sel[bid] ? "ok" : "missed");
+        else if (sel[bid]) bs[q].classList.add("ng");
+        bs[q].disabled = true;
+      }
+    }
+    if (ses.decideBtn) ses.decideBtn.disabled = true;
+    ses.nResult = { correct: correct, missed: missed, extra: extra };
+    grade(ok);
+  }
+
   function renderKeywordQ(body, p) {
     var chips = document.createElement("div");
     chips.className = "chips";
@@ -764,6 +930,7 @@
       if (btns[i].textContent === (mode === "capital" ? p.capital : p.name)) btns[i].classList.add("ok");
     }
     if (!ok) btn.classList.add("ng");
+    ses.choice = ok ? null : chosen;
     grade(ok);
   }
 
@@ -775,7 +942,8 @@
 
     it.seen += 1;
     if (ok) {
-      it.b = Math.min(5, it.b + 1);
+      var cap = (mode === "neighbor" && ses.nHint) ? 2 : 5;
+      it.b = Math.min(cap, it.b + 1);
       it.d = t + INTERVALS[it.b];
       ses.right++;
       sndOk();
@@ -799,18 +967,66 @@
     sheet.hidden = false;
     sheet.className = "sheet " + (ok ? "ok" : "ng");
     el("mark").textContent = ok ? "○" : "×";
-    el("sheetTitle").innerHTML = (ok ? "正解" : "答えは " + p.name) +
-      "<span>" + p.name + " ／ 県庁所在地 " + p.capital + "</span>";
+    if (mode === "neighbor") {
+      var nc = (NEIGHBORS[p.id] || []).length;
+      el("sheetTitle").innerHTML = (ok ? "正解" : "接する県は " + nc + "県") +
+        "<span>" + p.name + " ／ 陸続きの県 " + nc + "・橋とトンネルは別</span>";
+    } else if (mode === "capital") {
+      el("sheetTitle").innerHTML = (ok ? "正解 — " + p.capital + "市" : "答えは「" + p.capital + "」") +
+        "<span>" + p.name + " の県庁所在地</span>";
+    } else {
+      el("sheetTitle").innerHTML = (ok ? "正解" : "答えは " + p.name) +
+        "<span>" + p.name + " ／ 県庁所在地 " + p.capital + "</span>";
+    }
     el("nextBtn").textContent = (ses.i === ses.q.length - 1) ? "結果へ" : "次へ";
 
     var html = "";
-    if (mode === "map" && !p.same) {
-      html += '<div class="why"><span class="c">由来</span><span class="w">' + p.capWhy + "</span></div>";
+    if (mode === "neighbor") {
+      var r = ses.nResult || { correct: [], missed: [], extra: [] };
+      var nm = function (id) { return BY_ID[id].name.replace(/[県府都]$/, ""); };
+      html += '<div class="why"><span class="c">接する</span><span><b>' +
+        r.correct.map(nm).join("・") + "</b> <span class=\"w\">（" + r.correct.length + "県）</span></span></div>";
+      if (r.missed.length) {
+        html += '<div class="why"><span class="c">不足</span><span class="w">' + r.missed.map(nm).join("・") + "</span></div>";
+      }
+      if (r.extra.length) {
+        html += '<div class="why"><span class="c">余分</span><span class="w">' + r.extra.map(nm).join("・") +
+          " は接していません</span></div>";
+      }
+      if (!r.missed.length && !r.extra.length) {
+        html += '<div class="why"><span class="c">完了</span><span class="w">全' + r.correct.length + "県を名前から思い出せました</span></div>";
+      }
+      if (ses.nHint) {
+        html += '<div class="why"><span class="c">参考</span><span class="w">地図を見て答えました。次は地図なしで試すと定着します</span></div>';
+      }
+      var br = (typeof NEIGHBOR_BRIDGE !== "undefined" ? NEIGHBOR_BRIDGE : []).filter(function (b) {
+        return b[0] === p.id || b[1] === p.id;
+      });
+      if (br.length) {
+        html += '<div class="why"><span class="c">接続</span><span class="w">' + br.map(function (b) {
+          var other = b[0] === p.id ? b[1] : b[0];
+          return BY_ID[other].name + "（" + b[2] + "）";
+        }).join("・") + " — 橋・トンネルでつながるが陸続きではない</span></div>";
+      }
     }
-    p.items.forEach(function (it) {
-      html += '<div class="why"><span class="c">' + it.c + '</span><span><b>' + it.t +
-        '</b> <span class="w">— ' + it.w + "</span></span></div>";
-    });
+    if (mode === "capital" || (mode === "map" && !p.same)) {
+      html += '<div class="why"><span class="c">' + (p.same ? "街" : "由来") + '</span><span class="w">' +
+        p.capWhy + "</span></div>";
+    }
+    if (mode === "capital") {
+      html += '<div class="why"><span class="c">型</span><span class="w">' +
+        (p.same ? "県名と同名（全47のうち28県）" : "県名と異なる（全47のうち19県）") + "</span></div>";
+      if (!ok && ses.choice) {
+        html += '<div class="why"><span class="c">混同</span><span><b>' + ses.choice.capital +
+          '</b> は ' + ses.choice.name + " の県庁所在地</span></div>";
+      }
+    }
+    if (mode !== "neighbor" && mode !== "capital") {
+      p.items.forEach(function (it) {
+        html += '<div class="why"><span class="c">' + it.c + '</span><span><b>' + it.t +
+          '</b> <span class="w">— ' + it.w + "</span></span></div>";
+      });
+    }
     el("sheetBody").innerHTML = html;
     el("nextBtn").focus({ preventScroll: true });
   }
@@ -947,7 +1163,61 @@
 
     var q = new URLSearchParams(location.search);
     var h = q.get("s");
-    if (h === "map" || h === "capital" || h === "keyword" || h === "mixed") startSession(h);
+    if (h === "map" || h === "capital" || h === "keyword" || h === "mixed" || h === "neighbor") startSession(h);
+
+    // 動作確認用: ?p=gunma でその県を1問目に固定
+    var forcePref = q.get("p");
+    if (forcePref && ses && BY_ID[forcePref]) {
+      ses.q[0] = { mode: ses.mode, p: BY_ID[forcePref] };
+      ses.i = 0;
+      renderQ();
+    }
+    // 動作確認用: ?t=1 で全問正解、?t=2 で一部だけ選んで決定
+    var dbg = q.get("t");
+    if (dbg && h === "neighbor") {
+      setTimeout(function () {
+        var p = ses.q[ses.i].p;
+        var cor = NEIGHBORS[p.id] || [];
+        var pick = cor.slice();
+        if (dbg === "2") {
+          pick = cor.slice(1);
+          for (var k in MAP_PATHS) {
+            if (cor.indexOf(k) < 0 && k !== p.id && pick.indexOf(k) < 0) { pick.push(k); break; }
+          }
+        }
+        var bs = ses.nGrid.querySelectorAll(".namebtn");
+        for (var i = 0; i < bs.length; i++) {
+          if (pick.indexOf(bs[i].getAttribute("data-id")) >= 0) bs[i].click();
+        }
+        setTimeout(function () { if (ses.decideBtn) ses.decideBtn.click(); }, 100);
+      }, 350);
+    }
+    // 動作確認用: ?c=1 正解 / ?c=2 不正解 を自動で押す
+    var cq = new URLSearchParams(location.search).get("c");
+    if ((cq || q.get("w")) && h === "capital") {
+      var cur0 = ses.q[ses.i].p;
+      var bs0 = document.querySelectorAll("#qBody .opt");
+      for (var bi = 0; bi < bs0.length; bi++) {
+        var want = q.get("w");
+        var isAns0 = bs0[bi].textContent === cur0.capital;
+        var hit = want ? (bs0[bi].textContent === want)
+                       : ((cq === "1" && isAns0) || (cq === "2" && !isAns0));
+        if (hit) { bs0[bi].click(); break; }
+      }
+    }
+    if (q.get("dump")) {
+      setTimeout(function () {
+        var d = document.createElement("div");
+        d.id = "dumpBox";
+        d.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:999;background:#fff;color:#000;" +
+          "font:16px/1.6 ui-monospace,monospace;padding:10px;white-space:pre-wrap;border-bottom:3px solid #000";
+        var t = document.getElementById("sheetTitle");
+        var b = document.getElementById("sheetBody");
+        d.textContent = "TITLE: " + (t ? t.innerText.replace(/\n/g, " / ") : "(none)") +
+          "\nBODY:\n" + (b ? b.innerText : "(none)");
+        document.body.appendChild(d);
+      }, 900);
+    }
     if (q.get("v") === "book") show("book");
     if (q.get("v") === "settings") show("settings");
 

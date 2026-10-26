@@ -152,31 +152,16 @@
     svg.setAttribute("class", "jp");
     var g = document.createElementNS(NS, "g");
     g.setAttribute("class", "zoom");
-    PREF.forEach(function (p) {
+    PREF.forEach(function (pf) {
       var path = document.createElementNS(NS, "path");
-      path.setAttribute("d", MAP_PATHS[p.id]);
+      path.setAttribute("d", MAP_PATHS[pf.id]);
       path.setAttribute("class", "pref");
-      path.setAttribute("data-id", p.id);
+      path.setAttribute("data-id", pf.id);
       g.appendChild(path);
     });
-    var halo = document.createElementNS(NS, "g");
-    halo.setAttribute("class", "touch");
-    var order = [];
-    for (var i = 0; i < g.children.length; i++) {
-      var c = g.children[i], b = c.getBBox();
-      order.push({ d: c.getAttribute("d"), id: c.getAttribute("data-id"), a: b.width * b.height });
-    }
-    order.sort(function (x, y) { return y.a - x.a; });   // 小さい県ほど前面
-    order.forEach(function (o) {
-      var h = document.createElementNS(NS, "path");
-      h.setAttribute("d", o.d);
-      h.setAttribute("class", "halo");
-      h.setAttribute("data-id", o.id);
-      halo.appendChild(h);
-    });
-    g.appendChild(halo);
     svg.appendChild(g);
     svg._zoom = g;
+    svg._paths = g.querySelectorAll(".pref");
     return svg;
   }
 
@@ -268,6 +253,44 @@
     pt.x = cx; pt.y = cy;
     var p = pt.matrixTransform(m.inverse());
     return { x: p.x, y: p.y };
+  }
+
+  /* タップ位置から県を1つ決める。
+     ・透明な当たり判定パスは使わない（縁取りで判定が膨らむため）
+     ・各県の実ポリゴンに点が入っているかを直接判定する
+     ・重なっている場所（県境の隙間やトレース誤差）は面積が小さい県を優先
+     ・どの県にも入っていない場合は、画面上14px以内なら最寄りの代表点を返す */
+  function hitTest(svg, clientX, clientY) {
+    var m = svg.getScreenCTM();
+    if (!m) return null;
+    var pt = svg.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    var u = pt.matrixTransform(m.inverse());
+
+    var paths = svg._paths || svg.querySelectorAll(".pref");
+    var best = null, bestA = Infinity;
+    for (var i = 0; i < paths.length; i++) {
+      var node = paths[i];
+      if (!node.isPointInFill) continue;
+      if (!node.isPointInFill(u)) continue;
+      var id = node.getAttribute("data-id");
+      var a = (typeof MAP_AREAS !== "undefined" && MAP_AREAS[id]) || 1e9;
+      if (a < bestA) { bestA = a; best = id; }
+    }
+    if (best) return best;
+
+    var pxPerUnit = Math.abs(m.a) || 1;
+    var tol = 14 / pxPerUnit;
+    var nd = Infinity, nid = null;
+    if (typeof MAP_ANCHORS !== "undefined") {
+      for (var k in MAP_ANCHORS) {
+        var q = MAP_ANCHORS[k];
+        var dx = q[0] - u.x, dy = q[1] - u.y;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < nd) { nd = d; nid = k; }
+      }
+    }
+    return nd <= tol ? nid : null;
   }
 
   function zoomAtClient(svg, cx, cy, factor, dur) {
@@ -372,8 +395,7 @@
       if (n <= 0) {
         n = 0; ptrs = {}; pinchD = 0;
         if (start && start.moved < 8 && Date.now() - start.t < 800) {
-          var t = start.target;
-          var id = t && t.getAttribute ? t.getAttribute("data-id") : null;
+          var id = hitTest(svg, e.clientX, e.clientY);
           if (id && opts.onTap && !locked) opts.onTap(id);
         }
         start = null;
@@ -655,9 +677,6 @@
     var ans = svg.querySelector('.pref[data-id="' + p.id + '"]');
     if (ans) { ans.classList.remove("dim", "ng"); ans.classList.add("ok"); }
 
-    var halo = svg._zoom.querySelector(".touch");
-    if (halo) halo.setAttribute("pointer-events", "none");
-
     // 答えが小さくて見えないときは、その県に寄る
     if (scaleOf(svg) < 3.2) {
       if (p.region === "北海道" || p.region === "九州") fitRegion(svg, p.region, 260);
@@ -683,9 +702,6 @@
     }
     var ans = svg.querySelector('.pref[data-id="' + p.id + '"]');
     if (ans) { ans.style.fill = "#c3b393"; }
-    var halo = svg._zoom.querySelector(".touch");
-    if (halo) halo.setAttribute("pointer-events", "none");
-
     fitRegion(svg, p.region, 0);
     addLabel(svg, p.id, shortName(p));
 
@@ -940,6 +956,13 @@
     }
   }
 
+  window.__buildMap = buildMap;
+  window.__baseView = baseView;
+  window.__hitTest = hitTest;
+  window.__applyVB = function (svg) { applyVB(svg); };
+  window.__paths = MAP_PATHS;
+
+  if (!document.getElementById("screen-home")) return;
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
